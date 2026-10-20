@@ -1,0 +1,1399 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>The Anchor Timeline</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one anchor timeline across the top that a lecture scrubber fills in; below it the lecture card, the timeline so far by era, a student entry form, and the assessment plan. */
+:root {
+  --bg: #f1f3f6;
+  --surface: #ffffff;
+  --ink: #1a2030;
+  --muted: #5a6376;
+  --rule: #d6dbe3;
+  --accent: #1f3c88;
+  --accent-soft: #e3e9f7;
+  --e-C0: #868c97; --e-COL: #2b7a67; --e-REV: #a3333d; --e-ER: #3a55a0; --e-DIS: #9c6b0f; --e-REC: #7a4a93;
+  --display: "IM Fell English", "Iowan Old Style", Georgia, serif;
+  --body: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151c; --surface: #1a1e28; --ink: #e5e8ef; --muted: #9ba3b5; --rule: #2b3140;
+    --accent: #8fa8ec; --accent-soft: #232c45;
+    --e-C0: #9aa0ab; --e-COL: #5cc0a6; --e-REV: #e0707a; --e-ER: #8aa2e8; --e-DIS: #d9a845; --e-REC: #b98ad3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151c; --surface: #1a1e28; --ink: #e5e8ef; --muted: #9ba3b5; --rule: #2b3140;
+  --accent: #8fa8ec; --accent-soft: #232c45;
+  --e-C0: #9aa0ab; --e-COL: #5cc0a6; --e-REV: #e0707a; --e-ER: #8aa2e8; --e-DIS: #d9a845; --e-REC: #b98ad3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 56px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; text-wrap: balance; margin: 0; line-height: 1.12; }
+h2 { font-size: clamp(26px, 3.2vw, 32px); }
+.eyebrow, .label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.label { display: block; margin-bottom: 8px; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+p { margin: 0; }
+.sec-head { display: flex; flex-direction: column; gap: 6px; }
+.sec-head p { color: var(--muted); max-width: 70ch; }
+
+/* Masthead */
+header.mast { padding-top: 36px; display: flex; flex-direction: column; gap: 22px; }
+header.mast h1 { font-size: clamp(40px, 7vw, 72px); letter-spacing: -.01em; }
+header.mast .lede { max-width: 64ch; color: var(--muted); font-size: 16px; margin-top: 10px; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.steps div { padding: 16px 18px 16px 0; display: flex; flex-direction: column; gap: 4px; }
+.steps div + div { padding-left: 18px; border-left: 1px solid var(--rule); }
+.steps b { font-family: var(--display); font-weight: 400; font-size: 21px; }
+.steps span { color: var(--muted); font-size: 14px; }
+
+/* Builder */
+section.builder { display: flex; flex-direction: column; gap: 16px; }
+.chart-box { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+.chart-box svg { display: block; min-width: 780px; width: 100%; height: auto; }
+svg text { font-family: var(--mono); fill: var(--muted); font-size: 11px; }
+svg .evlbl { font-family: var(--body); fill: var(--ink); font-size: 12px; font-weight: 600; }
+svg .evlbl tspan.y { font-family: var(--mono); font-weight: 500; }
+svg .eraname { font-family: var(--body); font-size: 11.5px; font-weight: 600; }
+svg .note { font-family: var(--display); font-style: italic; font-size: 16px; fill: var(--ink); }
+svg .lead { stroke: var(--muted); stroke-width: 1; }
+svg .tick { stroke: var(--surface); stroke-width: 1.5; }
+svg .tick.anchor { stroke: var(--ink); stroke-width: 1.5; }
+svg .tick.new { stroke: var(--accent); stroke-width: 2.5; }
+svg .mine { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+svg .bound { stroke: var(--muted); stroke-width: 1; }
+svg .rail { stroke: var(--rule); stroke-width: 1.5; }
+svg .dim { opacity: .12; }
+svg .hit { fill: transparent; cursor: pointer; }
+svg [data-ev], svg [data-el], svg [data-en] { cursor: pointer; }
+svg text.evlbl:hover { text-decoration: underline; }
+.click { cursor: pointer; border-radius: 3px; }
+.click:hover .t, li.click:hover > span:not(.yr) { text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+dialog#detail { border: 1px solid var(--rule); border-top: 4px solid var(--c, var(--accent)); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; box-shadow: 0 18px 48px rgba(0,0,0,.25); }
+dialog#detail::backdrop { background: rgba(10, 14, 24, .45); }
+.d-wrap { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 14px; position: relative; }
+.d-wrap h3 { font-size: 28px; margin-top: 4px; padding-right: 36px; }
+#d-close { position: absolute; top: 12px; right: 12px; border: 1px solid var(--rule); background: var(--bg); border-radius: 4px; width: 32px; height: 32px; font-size: 18px; line-height: 1; }
+#detail-body { display: flex; flex-direction: column; gap: 14px; }
+.d-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.d-badges .type-tag, .d-badges .anchor-badge { margin-left: 0; }
+.d-field .label { margin-bottom: 4px; }
+.d-field p { line-height: 1.55; }
+.d-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.d-links .yr { font-family: var(--mono); }
+.d-edit { gap: 12px; }
+.d-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.locked { opacity: .55; }
+.soon { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px dashed var(--muted); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
+.live-bar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; background: var(--accent-soft); border-radius: 6px; padding: 10px 14px; font-size: 14px; }
+.live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--e-REV); box-shadow: 0 0 0 4px color-mix(in srgb, var(--e-REV) 25%, transparent); flex: none; }
+@media (prefers-reduced-motion: no-preference) { .live-dot { animation: pulse 2s ease-in-out infinite; } @keyframes pulse { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--e-REV) 8%, transparent); } } }
+
+/* Projector view */
+.present { position: fixed; inset: 0; z-index: 50; background: var(--bg); color: var(--ink); overflow: auto; display: flex; flex-direction: column; gap: 18px;
+  padding-top: max(20px, env(safe-area-inset-top, 0px)); padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+.p-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px 24px; align-items: start; }
+.p-head { min-width: 0; flex: 1 1 520px; display: flex; flex-direction: column; gap: 6px; }
+.p-head h2 { font-size: clamp(32px, 4.4vw, 60px); }
+.p-q { font-family: var(--display); font-style: italic; font-size: clamp(19px, 2.1vw, 28px); line-height: 1.3; border-left: 4px solid var(--c); padding-left: 14px; max-width: 60ch; }
+.p-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.p-ctrl select { width: auto; max-width: 260px; }
+.p-bc { display: inline-flex; gap: 6px; align-items: center; }
+.p-chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow-x: auto; }
+.p-chart svg { display: block; width: 100%; height: auto; min-width: 760px; }
+.p-card { display: flex; gap: 28px; align-items: flex-start; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: clamp(18px, 2.4vw, 32px); min-height: 160px; }
+.p-card .p-start { font-size: clamp(18px, 2vw, 24px); }
+.p-year { font-family: var(--mono); font-size: clamp(48px, 7vw, 96px); font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; flex: none; }
+.p-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.p-main h3 { font-size: clamp(28px, 3.4vw, 46px); }
+.p-big { font-size: clamp(18px, 1.9vw, 24px); }
+.p-5w { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.p-5w div { border: 1.5px dashed var(--rule); border-radius: 6px; padding: 10px 12px; min-height: 72px; display: flex; flex-direction: column; gap: 4px; }
+.p-5w b { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.p-5w span { color: var(--muted); font-style: italic; }
+.p-top, .p-chart, .p-card, .p-bottom { flex: none; }
+.p-answer[hidden] { display: none; }
+.p-answer { display: flex; flex-direction: column; gap: 8px; font-size: clamp(16px, 1.6vw, 21px); max-width: 75ch; }
+.p-answer b { font-weight: 600; }
+.p-bottom { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-top: auto; position: sticky; bottom: calc(-1 * max(20px, env(safe-area-inset-bottom, 0px))); background: var(--bg); padding-block: 10px max(10px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--rule); }
+.p-bottom .btn { font-size: 15px; padding: 9px 16px; }
+@media (max-width: 760px) { .p-card { flex-direction: column; gap: 12px; } .p-5w { grid-template-columns: 1fr 1fr; } }
+dialog#detail.wide { width: min(820px, calc(100vw - 32px)); }
+#ln-text { min-height: 52vh; font-size: 15px; line-height: 1.6; }
+.mynotes { border: 1px dashed var(--accent); border-radius: 5px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.mynotes .preview { font-size: 13.5px; white-space: pre-line; color: var(--muted); }
+.notes-btn { font-size: 12.5px; padding: 4px 10px; white-space: nowrap; }
+.private-note { font-size: 12.5px; color: var(--accent); font-weight: 600; }
+.types { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.types .lbl { font-size: 12.5px; color: var(--muted); margin-right: 4px; }
+.types button { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 4px 11px; font-size: 13px; }
+.types button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.types button .c { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 4px; }
+.type-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--rule); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
+.adds li.dim, .era-block .row.dim { opacity: .3; }
+.era-block .row .tt { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-left: 5px; letter-spacing: .04em; }
+table.mix { font-size: 14px; }
+table.mix th { white-space: nowrap; }
+table.mix th button { border: 0; background: none; padding: 0; font: inherit; color: var(--muted); font-weight: 600; text-decoration: underline dotted; text-underline-offset: 3px; }
+table.mix th button[aria-pressed="true"] { color: var(--accent); }
+table.mix td, table.mix th { text-align: center; padding: 7px 8px; border-bottom: 2px solid var(--bg); }
+table.mix td:first-child, table.mix th:first-child { text-align: left; }
+table.mix td.cell { font-family: var(--mono); font-variant-numeric: tabular-nums; min-width: 64px; border-left: 2px solid var(--bg); }
+table.mix td.cell.sel { outline: 2px solid var(--accent); outline-offset: -2px; }
+table.mix tr.tot td { font-weight: 600; border-top: 1px solid var(--rule); }
+table.mix .era-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 7px; }
+svg .etick { stroke: var(--ink); stroke-width: 1.5; }
+svg .pivot { fill: var(--accent); stroke: var(--surface); stroke-width: 1; }
+svg .etick.off, svg .pivot.off { opacity: .22; }
+svg .etick.new { stroke: var(--accent); stroke-width: 2.5; }
+svg .pivot.new { stroke: var(--ink); stroke-width: 1.5; }
+svg .elbl { font-size: 10px; }
+svg .elbl.pv { fill: var(--accent); font-weight: 500; }
+.key i.el { border-radius: 0; width: 2px; height: 11px; background: var(--ink); }
+.key i.p { border-radius: 0; transform: rotate(45deg); width: 8px; height: 8px; background: var(--accent); }
+.pivot-badge { border-color: var(--accent); color: var(--accent); }
+table.elections tr.pv td { background: var(--accent-soft); }
+table.elections tr.pv td:first-child { box-shadow: inset 3px 0 0 var(--accent); padding-left: 8px; }
+table.elections td:first-child { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 8px; }
+table.elections .why { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+table.elections button { border: 0; background: none; padding: 0; color: var(--accent); font-family: var(--mono); font-size: 12.5px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.scrub { display: flex; align-items: center; gap: 10px; flex: 1 1 380px; min-width: 0; }
+.scrub input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.btn { border: 1px solid var(--rule); background: var(--surface); border-radius: 4px; padding: 6px 12px; font-size: 13px; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 6px 10px; font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.counter { font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.lecture { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: clamp(18px, 3vw, 30px); display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; }
+.lecture h3 { font-size: clamp(26px, 3.4vw, 36px); margin: 6px 0 12px; }
+.question { font-family: var(--display); font-style: italic; font-size: 20px; line-height: 1.3; padding-left: 14px; border-left: 3px solid var(--c); }
+.adds { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.adds li { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.adds .yr { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.anchor-badge { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--ink); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
+.lec-side { display: flex; flex-direction: column; gap: 18px; }
+.skill { background: var(--accent-soft); border-radius: 5px; padding: 14px 16px; }
+.skill p { font-weight: 500; }
+.due { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.frame-note { margin-top: 18px; color: var(--muted); }
+
+/* Timeline so far */
+.sofar { columns: 3 300px; column-gap: 28px; }
+.era-block { break-inside: avoid; margin-bottom: 22px; border-top: 3px solid var(--c); padding-top: 10px; }
+.era-block h4 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 20px; }
+.era-block .meta { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.era-block .row { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; font-size: 14px; padding: 2px 0; }
+.era-block .row .y { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--c); font-weight: 500; }
+.era-block .row.anchor .t { font-weight: 600; }
+.era-block .row.new .t { background: var(--accent-soft); box-shadow: -4px 0 0 var(--accent-soft), 4px 0 0 var(--accent-soft); }
+.era-block .row.mine .t { font-style: italic; }
+.era-block .more { font-size: 13px; color: var(--muted); padding-top: 4px; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.key i.a { background: var(--surface); border: 2px solid var(--ink); }
+.key i.n { background: var(--surface); border: 2.5px solid var(--accent); }
+.key i.m { border-radius: 0; transform: rotate(45deg); width: 8px; height: 8px; background: var(--surface); border: 1.5px solid var(--ink); }
+
+/* Entry form */
+section.entry { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: clamp(18px, 3vw, 30px); }
+form { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 13px; font-weight: 600; }
+.field small { color: var(--muted); font-size: 12.5px; }
+.field-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
+input[type=number], input[type=text], textarea, select { background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 64px; }
+.err { color: var(--e-REV); font-size: 13px; min-height: 1em; }
+.entries { display: flex; flex-direction: column; gap: 10px; }
+.entry-card { border: 1px solid var(--rule); border-left: 3px solid var(--c); border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.entry-card .top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.entry-card .top b { font-weight: 600; }
+.entry-card .top b span { font-family: var(--mono); font-weight: 500; margin-right: 6px; }
+.entry-card .rm { border: 0; background: none; color: var(--muted); font-size: 12.5px; padding: 0; text-decoration: underline; }
+.entry-card .link { color: var(--muted); font-size: 13px; }
+.ex { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px dashed var(--muted); border-radius: 3px; padding: 0 5px; margin-left: 6px; }
+.fine { font-size: 12.5px; color: var(--muted); }
+form :disabled { opacity: .55; cursor: not-allowed; }
+
+/* Instructor view */
+section.teacher { display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); padding: clamp(18px, 3vw, 30px); }
+.t-table td.num, .t-table th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.t-table td.zero { color: var(--muted); opacity: .6; }
+.t-detail { columns: 2 340px; column-gap: 24px; }
+.t-student { break-inside: avoid; margin-bottom: 18px; display: flex; flex-direction: column; gap: 8px; }
+.t-student h4 { margin: 0; font-size: 15px; font-weight: 600; }
+.t-student h4 span { font-weight: 400; color: var(--muted); font-size: 13px; }
+
+/* Assessments */
+.assess { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.a-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.a-card .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.a-card h3 { font-size: 22px; }
+.a-card .pct { font-family: var(--mono); font-size: 20px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.a-card .when { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.a-card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; font-size: 12px; color: var(--muted); }
+td.num { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fade { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.fade div { border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); }
+.fade b { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: .05em; text-transform: uppercase; }
+.fade .bar { height: 5px; border-radius: 3px; background: var(--accent); }
+
+/* Schedule */
+.sched-box { overflow-x: auto; }
+.sched td:first-child { font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+.sched tr.era-row td { padding-top: 16px; font-family: var(--display); font-size: 18px; color: var(--c); border-bottom: 2px solid var(--c); }
+.sched button { border: 0; background: none; padding: 0; text-align: left; color: var(--ink); font-weight: 500; }
+.sched button:hover { color: var(--accent); text-decoration: underline; }
+.sched .yrs { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.sched .duecell { font-size: 13px; color: var(--muted); }
+.sched .duecell b { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 760px) {
+  .steps { grid-template-columns: 1fr; }
+  .steps div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
+  .lecture, section.entry, .assess { grid-template-columns: 1fr; }
+  .fade { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <div class="eyebrow">U.S. History I · 1492–1877 · 16 weeks · 31 lectures</div>
+      <h1>The Anchor Timeline</h1>
+      <p class="lede">One timeline, five eras, and a presidential election every four years. Each lecture adds dated events to it, each assessment asks students to add more, and at the end of the course every student builds it from a blank page.</p>
+    </div>
+    <div class="steps">
+      <div><b>Lectures build it</b><span>Each lecture places 2–5 events on the class timeline and teaches one timeline skill.</span></div>
+      <div><b>Students add to it</b><span>For each era, students research and add three events that lecture did not cover.</span></div>
+      <div><b>Students build it</b><span>The final exam is a blank line from 1492 to 1877. Students draw the eras and place the anchors from memory.</span></div>
+    </div>
+  </header>
+
+  <section class="builder" aria-labelledby="b-h">
+    <div class="sec-head">
+      <div class="eyebrow">Timeline builder</div>
+      <h2 id="b-h">Watch it grow, lecture by lecture</h2>
+    </div>
+    <div class="controls">
+      <div class="scrub">
+        <button class="btn" id="prev" aria-label="Previous lecture">←</button>
+        <input type="range" id="lec" min="1" max="31" value="1" aria-label="Show the timeline after this lecture">
+        <button class="btn" id="next" aria-label="Next lecture">→</button>
+        <span class="counter" id="counter"></span>
+      </div>
+      <div class="seg" role="group" aria-label="Timeline scale">
+        <button id="sc-eq" aria-pressed="true">Equal eras</button>
+        <button id="sc-true" aria-pressed="false">True years</button>
+      </div>
+    </div>
+    <div class="live-bar" id="live-bar" hidden></div>
+    <div class="types" id="types" role="group" aria-label="Show events by type"></div>
+    <div class="chart-box"><svg id="chart" role="img" aria-label="The anchor timeline with events placed so far"></svg></div>
+    <div class="key">
+      <span><i></i>Event placed in lecture</span>
+      <span><i class="a"></i>Anchor date (know the year)</span>
+      <span><i class="n"></i>Added this lecture</span>
+      <span><i class="m"></i>Student entry</span>
+      <span><i class="el"></i>Presidential election</span>
+      <span><i class="p"></i>Pivotal election</span>
+    </div>
+    <article class="lecture" id="lecture" aria-live="polite"></article>
+  </section>
+
+  <section aria-labelledby="sf-h" style="display:flex;flex-direction:column;gap:16px">
+    <div class="sec-head">
+      <div class="eyebrow">The timeline so far</div>
+      <h2 id="sf-h">What students know by this point</h2>
+      <p>Anchor dates are in bold. Students must know their exact years. For every other event, they need to know its era and its order. Select any event to open its card. Events from later lectures stay hidden until they are added.</p>
+    </div>
+    <div class="sofar" id="sofar"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px" aria-labelledby="mix-h">
+    <div class="sec-head">
+      <div class="eyebrow">Balance by type</div>
+      <h2 id="mix-h">The mix of history in each era</h2>
+      <p>Every lecture event has one primary type. Darker cells mean a larger share of that era's events. Elections are not counted here. Select a type to highlight it on the timeline.</p>
+    </div>
+    <div class="sched-box"><table class="mix" id="mix"></table></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px" aria-labelledby="el-h">
+    <div class="sec-head">
+      <div class="eyebrow">The election rail</div>
+      <h2 id="el-h">An election every four years</h2>
+      <p>Federal politics is the backbone of the timeline. Students learn the four-year rhythm of presidential elections from 1788 to 1876 and know the eight pivotal elections well. Social, economic, and cultural events are placed against that rhythm.</p>
+    </div>
+    <div class="sched-box"><table class="elections">
+      <thead><tr><th style="padding-left:8px">Year</th><th>Winner</th><th>Opponent or result</th><th>Lecture</th></tr></thead>
+      <tbody id="elections"></tbody>
+    </table></div>
+  </section>
+
+  <section class="entry" aria-labelledby="en-h">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="sec-head">
+        <div class="eyebrow">Era Entries</div>
+        <h2 id="en-h">Add an event to the timeline</h2>
+        <p>Add an event lecture did not cover, explain why it matters, and connect it to an anchor date. Your entry goes on the class timeline with your name, and your instructor sees every entry.</p>
+      </div>
+      <form id="form" novalidate>
+        <div class="field"><label for="f-student">Your name</label><input type="text" id="f-student" maxlength="60" autocomplete="name" placeholder="First and last name"></div>
+        <div class="field-row">
+          <div class="field"><label for="f-year">Year</label><input type="number" id="f-year" min="1492" max="1877" placeholder="1718"></div>
+          <div class="field"><label for="f-name">What happened</label><input type="text" id="f-name" maxlength="90" placeholder="Spain founds San Antonio"></div>
+        </div>
+        <div class="field"><label for="f-why">Why it matters</label><textarea id="f-why" maxlength="300" placeholder="One or two sentences."></textarea></div>
+        <div class="field-row">
+          <div class="field"><label for="f-rel">Connection</label>
+            <select id="f-rel"><option>Caused by</option><option>Led to</option><option>Similar to</option><option>Contrasts with</option></select>
+          </div>
+          <div class="field"><label for="f-link">Anchor event</label><select id="f-link"></select></div>
+        </div>
+        <div class="field"><label for="f-src">Source</label><input type="text" id="f-src" maxlength="140" placeholder="Textbook chapter, document, or website"></div>
+        <p class="err" id="f-err" role="alert"></p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button type="submit" class="btn primary">Add to timeline</button>
+          <span class="fine" id="f-status" role="status">Connecting to the class timeline…</span>
+        </div>
+      </form>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <span class="label">Your entries</span>
+      <div class="entries" id="entries"></div>
+    </div>
+  </section>
+
+  <section class="teacher" id="teacher" hidden aria-labelledby="t-h">
+    <div class="sec-head">
+      <div class="eyebrow">Instructor view · shown only to you and editors</div>
+      <h2 id="t-h">Student entries</h2>
+      <p id="t-sum">No entries yet. They appear here as students submit them.</p>
+    </div>
+    <div class="controls">
+      <label for="t-era" class="fine">Show</label>
+      <select id="t-era" style="width:auto"><option value="">All eras</option></select>
+    </div>
+    <div class="sched-box"><table class="t-table">
+      <thead><tr><th>Student</th><th>Account</th><th class="num">Context</th><th class="num">Colonial</th><th class="num">Rev.</th><th class="num">Early Rep.</th><th class="num">Disunion</th><th class="num">Recon.</th><th class="num">Total</th></tr></thead>
+      <tbody id="t-body"></tbody>
+    </table></div>
+    <div class="t-detail" id="t-detail"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:18px" aria-labelledby="as-h">
+    <div class="sec-head">
+      <div class="eyebrow">Assessments</div>
+      <h2 id="as-h">Every grade is a timeline task</h2>
+      <p>The help students get shrinks as the semester goes on. By the final they work from a blank page.</p>
+    </div>
+    <div class="fade" aria-label="How support fades across the checkpoints">
+      <div><b>Checkpoint 1</b>Word bank with dates<span class="bar" style="width:100%"></span></div>
+      <div><b>Checkpoint 2</b>Word bank, no dates<span class="bar" style="width:75%"></span></div>
+      <div><b>Checkpoint 3</b>Era boundaries given<span class="bar" style="width:50%"></span></div>
+      <div><b>Checkpoint 4</b>Blank era strip<span class="bar" style="width:25%"></span></div>
+      <div><b>Final</b>Blank page<span class="bar" style="width:4%"></span></div>
+    </div>
+    <div class="assess">
+      <div class="a-card">
+        <div class="hd"><h3>Weekly Timeline Checks</h3><span class="pct">15%</span></div>
+        <span class="when">Weeks 2–15 · 14 checks · lowest two dropped</span>
+        <p>Students put five of the week's events in order and assign each one to its era. Open notes, about ten minutes.</p>
+      </div>
+      <div class="a-card">
+        <div class="hd"><h3>Era Entries</h3><span class="pct">25%</span></div>
+        <span class="when">5 entries · one per era · due the week after the era closes</span>
+        <p>Students add three events that lecture did not cover. Each event is scored out of 10:</p>
+        <table>
+          <tbody>
+            <tr><td>Correct year and era</td><td class="num">2</td></tr>
+            <tr><td>What happened, in the student's own words</td><td class="num">2</td></tr>
+            <tr><td>Why it matters</td><td class="num">3</td></tr>
+            <tr><td>Connection to an anchor date (cause, effect, or comparison)</td><td class="num">2</td></tr>
+            <tr><td>Source cited</td><td class="num">1</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="a-card">
+        <div class="hd"><h3>Era Checkpoints</h3><span class="pct">25%</span></div>
+        <span class="when">4 in class · Weeks 4, 6, 11, 14 · 20 minutes</span>
+        <ul>
+          <li>Mark the era's start and end years and say why the era begins and ends there.</li>
+          <li>Place the era's anchor dates and presidential elections on a strip.</li>
+          <li>Explain one cause-and-effect link in two or three sentences.</li>
+        </ul>
+        <p class="fine">Reconstruction has no checkpoint. Its anchors are tested on the final.</p>
+      </div>
+      <div class="a-card">
+        <div class="hd"><h3>Final: Build the Timeline</h3><span class="pct">35%</span></div>
+        <span class="when">Week 16 · blank paper · 100 points</span>
+        <table>
+          <tbody>
+            <tr><td>A. Draw 1492–1877 with all five eras and their boundary years, and an election rail from 1788 to 1876 with the eight pivotal elections and their winners</td><td class="num">15</td></tr>
+            <tr><td>B. Place the 33 anchor dates from memory, including all five amendment dates</td><td class="num">35</td></tr>
+            <tr><td>C. Add 8 more events of your choice, each with one sentence on why it matters</td><td class="num">30</td></tr>
+            <tr><td>D. Trace one thread, such as slavery and freedom, through all five eras</td><td class="num">20</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:14px" aria-labelledby="sc-h">
+    <div class="sec-head">
+      <div class="eyebrow">Schedule</div>
+      <h2 id="sc-h">Thirty-one lectures in five eras</h2>
+      <p>Two lectures a week. Select a lecture to see the timeline as it stands after that lecture.</p>
+    </div>
+    <div class="sched-box">
+      <table class="sched">
+        <thead><tr><th>Week</th><th>Lecture</th><th>Adds</th><th>Due</th><th class="owner-only" hidden>Your notes</th></tr></thead>
+        <tbody id="sched"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div id="present" class="present" hidden role="region" aria-label="Projector view">
+  <header class="p-top">
+    <div class="p-head">
+      <div class="eyebrow" id="p-eyebrow" style="color:var(--c)"></div>
+      <h2 id="p-title"></h2>
+      <p class="p-q" id="p-q"></p>
+    </div>
+    <div class="p-ctrl">
+      <label class="fine" for="p-lec">Lecture</label>
+      <select id="p-lec"></select>
+      <label class="p-bc fine"><input type="checkbox" id="p-bc" checked> Update students' timelines</label>
+      <button class="btn" id="p-full">Full screen</button>
+      <button class="btn" id="p-exit">Exit</button>
+    </div>
+  </header>
+  <div class="p-chart"><svg id="p-svg" role="img" aria-label="This lecture's timeline"></svg></div>
+  <section class="p-card" id="p-card" aria-live="polite"></section>
+  <footer class="p-bottom">
+    <button class="btn" id="p-prev">← Back</button>
+    <button class="btn primary" id="p-next">Add next →</button>
+    <span class="counter" id="p-count"></span>
+    <span class="fine" id="p-sync" role="status"></span>
+  </footer>
+</div>
+
+<dialog id="detail" aria-labelledby="detail-body">
+  <div class="d-wrap">
+    <button id="d-close" aria-label="Close">×</button>
+    <div id="detail-body"></div>
+  </div>
+</dialog>
+
+<script>
+const ERAS = [
+  { id: "C0", name: "Contact & Context", short: "Context", start: 1492, end: 1607 },
+  { id: "COL", name: "Colonial Period", short: "Colonial", start: 1607, end: 1763 },
+  { id: "REV", name: "Revolutionary Period", short: "Revolutionary", start: 1763, end: 1789 },
+  { id: "ER", name: "Early Republic & National Expansion", short: "Early Republic", start: 1789, end: 1848 },
+  { id: "DIS", name: "Disunion & Civil War", short: "Disunion & War", start: 1848, end: 1865 },
+  { id: "REC", name: "Reconstruction", short: "Reconstruction", start: 1865, end: 1877 }
+];
+
+// [year, event, anchor]
+const LECTURES = [
+  { era: "C0", title: "What Is a Timeline?", q: "How do historians divide time into eras, and why do the dividing lines matter?", skill: "Years, decades, and centuries. The 1700s are the 18th century.", ev: [] },
+  { era: "C0", title: "Worlds Collide", q: "What did Native Americans, Europeans, and Africans each bring to their meeting?", skill: "Context: what happened before the story starts.", ev: [[1492,"Columbus reaches the Americas",1,"X"],[1519,"Spain conquers the Aztec Empire",0,"W"],[1528,"Cabeza de Vaca shipwrecked in Texas",0,"X"],[1565,"Spain founds St. Augustine",0,"X"]] },
+  { era: "COL", title: "Jamestown & the Chesapeake", q: "Why did Virginia survive when earlier English colonies failed?", skill: "Placing an event: when, where, and who.", ev: [[1607,"Jamestown founded",1,"X"],[1612,"Tobacco becomes Virginia's cash crop",0,"E"],[1619,"Enslaved Africans arrive; House of Burgesses meets",1,"S"]] },
+  { era: "COL", title: "Pilgrims & Puritans", q: "How did religion shape the New England and Middle colonies?", skill: "Simultaneity: two places at the same time.", ev: [[1620,"Mayflower Compact",1,"P"],[1630,"Puritans found Massachusetts Bay",0,"R"],[1636,"Roger Williams founds Rhode Island",0,"R"],[1681,"William Penn founds Pennsylvania",0,"R"]] },
+  { era: "COL", title: "Native Nations & Colonial Wars", q: "How did Native nations resist, adapt to, and shape colonization?", skill: "Cause and effect.", ev: [[1622,"Powhatan uprising in Virginia",0,"W"],[1637,"Pequot War",0,"W"],[1675,"King Philip's War",0,"W"],[1680,"Pueblo Revolt",0,"W"]] },
+  { era: "COL", title: "Slavery Takes Root", q: "How did Virginia turn servitude into slavery for life?", skill: "Change over time.", ev: [[1662,"Virginia: slave status follows the mother",0,"S"],[1676,"Bacon's Rebellion",1,"S"],[1705,"Virginia slave codes",0,"S"],[1739,"Stono Rebellion",0,"S"]] },
+  { era: "COL", title: "Colonial Society", q: "What tied the colonies to Britain, and to each other, by 1750?", skill: "Continuity: what stays the same.", ev: [[1692,"Salem witch trials",0,"R"],[1733,"Georgia, the 13th colony, founded",0,"X"],[1735,"Zenger trial",0,"P"],[1740,"Great Awakening",0,"R"]] },
+  { era: "COL", title: "The French & Indian War", q: "How did Britain's biggest victory create its biggest problem?", skill: "Era boundaries: why does 1763 end an era?", ev: [[1754,"French and Indian War begins",1,"W"],[1763,"Treaty of Paris ends the war",1,"W"]] },
+  { era: "REV", title: "Taxes & Protest", q: "Why did colonists say Parliament had no right to tax them?", skill: "Chains of causation.", ev: [[1763,"Proclamation Line closes the West",0,"P"],[1765,"Stamp Act",1,"P"],[1767,"Townshend Acts",0,"E"],[1770,"Boston Massacre",0,"W"],[1773,"Boston Tea Party",0,"P"]] },
+  { era: "REV", title: "The Road to Independence", q: "When did resistance become revolution?", skill: "Sequencing events that happen close together.", ev: [[1774,"Intolerable Acts; First Continental Congress",0,"P"],[1775,"Lexington and Concord",1,"W"],[1776,"Paine's Common Sense",0,"R"],[1776,"Declaration of Independence",1,"P"]] },
+  { era: "REV", title: "Winning the War", q: "How did an underdog army defeat the British Empire?", skill: "Turning points.", ev: [[1777,"Battle of Saratoga",0,"W"],[1778,"Alliance with France",0,"W"],[1781,"Victory at Yorktown",1,"W"],[1783,"Treaty of Paris recognizes independence",0,"W"]] },
+  { era: "REV", title: "From Articles to Constitution", q: "Why did the first national government fail, and what replaced it?", skill: "Spans and moments: a period versus a single date.", ev: [[1781,"Articles of Confederation take effect",0,"P"],[1786,"Shays' Rebellion",0,"E"],[1787,"Constitution written; Northwest Ordinance",1,"P"],[1788,"Constitution ratified",0,"P"]] },
+  { era: "ER", title: "Washington & Hamilton", q: "How did the first president turn the Constitution into a working government?", skill: "Precedent: firsts that set patterns.", ev: [[1789,"Washington becomes president",1,"P"],[1791,"Bill of Rights ratified",1,"P"],[1791,"First Bank of the United States",0,"E"],[1794,"Whiskey Rebellion",0,"E"]] },
+  { era: "ER", title: "Parties & the Election of 1800", q: "Why did political parties form when the founders feared them?", skill: "Periodization: was 1800 a revolution?", ev: [[1796,"Washington's Farewell Address",0,"P"],[1798,"Alien and Sedition Acts",0,"P"]] },
+  { era: "ER", title: "Jefferson's West", q: "How did the Louisiana Purchase change the nation's size and future?", skill: "Reading maps and timelines together.", ev: [[1803,"Marbury v. Madison",0,"P"],[1803,"Louisiana Purchase",1,"X"],[1804,"Lewis and Clark expedition",0,"X"],[1804,"12th Amendment: separate electoral votes for president and vice president",1,"P"],[1808,"Atlantic slave trade banned",0,"S"]] },
+  { era: "ER", title: "The War of 1812", q: "Why did the United States fight Britain again, and what did it gain?", skill: "Simultaneous events in different places.", ev: [[1807,"Embargo Act",0,"E"],[1811,"Battle of Tippecanoe",0,"W"],[1812,"War of 1812 begins",1,"W"],[1815,"Battle of New Orleans",0,"W"]] },
+  { era: "ER", title: "Nationalism & the Missouri Crisis", q: "Why did one new state threaten to split the Union?", skill: "Linking across eras: from 1787 to 1820.", ev: [[1819,"McCulloch v. Maryland",0,"P"],[1820,"Missouri Compromise",1,"P"],[1823,"Monroe Doctrine",0,"W"]] },
+  { era: "ER", title: "Jackson's America", q: "How democratic was Jacksonian democracy, and for whom?", skill: "Perspective: one event, several viewpoints.", ev: [[1830,"Indian Removal Act",1,"P"],[1832,"Nullification Crisis",0,"P"],[1838,"Trail of Tears",0,"S"]] },
+  { era: "ER", title: "Cotton & the Market Revolution", q: "How did cotton, canals, and factories change how Americans worked?", skill: "Long-term trends versus single events.", ev: [[1793,"Cotton gin invented",0,"E"],[1825,"Erie Canal opens",0,"E"],[1831,"Nat Turner's rebellion",0,"S"],[1837,"Panic of 1837",0,"E"]] },
+  { era: "ER", title: "Reform & Abolition", q: "Why did so many Americans set out to perfect society?", skill: "Movements as spans of time.", ev: [[1831,"Garrison starts The Liberator",0,"S"],[1845,"Frederick Douglass publishes his Narrative",0,"R"],[1848,"Seneca Falls Convention",0,"S"]] },
+  { era: "ER", title: "Texas", q: "Why did Texas break from Mexico, and who won and lost?", skill: "Local and national: Texas in the U.S. story.", ev: [[1821,"Mexico independent; Austin's colony begins",0,"X"],[1836,"Texas Revolution: the Alamo and San Jacinto",1,"W"],[1845,"Texas annexed",0,"X"]] },
+  { era: "ER", title: "Manifest Destiny & the Mexican War", q: "How did the United States reach the Pacific, and at what cost?", skill: "Era boundaries: why does 1848 end an era?", ev: [[1846,"Mexican-American War begins",1,"W"],[1846,"Wilmot Proviso",0,"P"],[1848,"Treaty of Guadalupe Hidalgo",0,"W"],[1849,"California Gold Rush",0,"E"]] },
+  { era: "DIS", title: "The Compromise of 1850", q: "Could compromise settle the question of slavery in the West?", skill: "Patterns: the compromises of 1787, 1820, and 1850.", ev: [[1850,"Compromise of 1850; Fugitive Slave Act",1,"P"],[1852,"Uncle Tom's Cabin",0,"R"]] },
+  { era: "DIS", title: "Bleeding Kansas", q: "Why did Kansas become a battlefield?", skill: "Escalation.", ev: [[1854,"Kansas-Nebraska Act",1,"P"],[1854,"Republican Party forms",0,"P"],[1856,"Bleeding Kansas; Sumner caned",0,"W"]] },
+  { era: "DIS", title: "Dred Scott to Harpers Ferry", q: "How did the Supreme Court and John Brown push the nation toward war?", skill: "Countdown: reading a tight sequence.", ev: [[1857,"Dred Scott decision",1,"P"],[1858,"Lincoln-Douglas debates",0,"P"],[1859,"John Brown's raid",0,"W"]] },
+  { era: "DIS", title: "Election & Secession", q: "Why did Lincoln's election lead eleven states to leave the Union?", skill: "Era boundaries: from disunion to war.", ev: [[1860,"South Carolina secedes",1,"P"],[1861,"Texas secedes; Confederacy formed",0,"P"],[1861,"Fort Sumter: the war begins",1,"W"]] },
+  { era: "DIS", title: "The War, 1861–1863", q: "How did a war for union become a war for freedom?", skill: "Turning points in war.", ev: [[1861,"First Battle of Bull Run",0,"W"],[1862,"Battle of Antietam",0,"W"],[1863,"Emancipation Proclamation",1,"P"],[1863,"Gettysburg and Vicksburg",0,"W"]] },
+  { era: "DIS", title: "Ending the War", q: "When did the war actually end, and for whom?", skill: "Endings: one war, several end dates.", ev: [[1864,"Sherman's March to the Sea",0,"W"],[1865,"Appomattox; Lincoln assassinated",1,"W"],[1865,"Juneteenth in Galveston",0,"S"],[1865,"13th Amendment abolishes slavery",1,"P"]] },
+  { era: "REC", title: "Presidential Reconstruction", q: "What did freedom mean in 1865, and who got to decide?", skill: "Parallel timelines: competing plans.", ev: [[1865,"Freedmen's Bureau; Black Codes",0,"S"],[1866,"Civil Rights Act of 1866",0,"P"],[1867,"Reconstruction Acts",1,"P"]] },
+  { era: "REC", title: "Radical Reconstruction & Retreat", q: "Why did Reconstruction end before its promises were kept?", skill: "Era boundaries: why does 1877 end an era?", ev: [[1868,"14th Amendment",1,"P"],[1870,"15th Amendment",1,"P"],[1871,"Ku Klux Klan Act",0,"P"],[1873,"Colfax Massacre; Panic of 1873",0,"S"],[1877,"Compromise of 1877",1,"P"]] },
+  { era: "REC", title: "Build the Timeline", q: "Can you build the whole timeline from a blank page?", skill: "Synthesis: the whole course on one line.", ev: [] }
+];
+
+const DUE = {
+  8: ["Era Checkpoint 1: Colonial Period"],
+  10: ["Era Entry 1: Colonial Period"],
+  12: ["Era Checkpoint 2: Revolutionary Period"],
+  14: ["Era Entry 2: Revolutionary Period"],
+  22: ["Era Checkpoint 3: Early Republic"],
+  24: ["Era Entry 3: Early Republic"],
+  28: ["Era Checkpoint 4: Disunion & Civil War"],
+  30: ["Era Entry 4: Disunion & Civil War"],
+  31: ["Era Entry 5: Reconstruction", "Final: Build the Timeline (exam week)"]
+};
+
+LECTURES.forEach((l, i) => { l.n = i + 1; l.wk = Math.ceil(l.n / 2); });
+const TYPES = { P: "Political", S: "Social", E: "Economic", W: "War & Diplomacy", R: "Religion & Culture", X: "Expansion & Settlement" };
+let typeF = null;
+const offType = (k) => typeF && k !== typeF;
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48);
+const ALL = LECTURES.flatMap(l => l.ev.map(([y, t, a, k]) => ({ id: `ev-${y}-${slug(t)}`, y, t, a: !!a, k, n: l.n, era: l.era })));
+const ANCHORS = ALL.filter(e => e.a);
+const isAmendment = (t) => /Amendment|Bill of Rights/.test(t);
+
+// Presidential elections. n = the lecture that puts it on the rail; p = pivotal.
+const ELECTIONS = [
+  { y: 1788, n: 13, p: 1, w: "George Washington", o: "Elected unanimously by the Electoral College", why: "The first election under the Constitution. The Electoral College is used for the first time, and Washington's acceptance gives the new government legitimacy." },
+  { y: 1792, n: 13, w: "George Washington", o: "Re-elected unanimously" },
+  { y: 1796, n: 14, w: "John Adams (Federalist)", o: "Thomas Jefferson (Democratic-Republican)" },
+  { y: 1800, n: 14, p: 1, w: "Thomas Jefferson (Democratic-Republican)", o: "John Adams (Federalist)", why: "Power passes peacefully from one party to its rival for the first time. A Jefferson–Burr tie sent the race to the House and led to the 12th Amendment." },
+  { y: 1804, n: 15, w: "Thomas Jefferson (Democratic-Republican)", o: "Charles C. Pinckney (Federalist)" },
+  { y: 1808, n: 16, w: "James Madison (Democratic-Republican)", o: "Charles C. Pinckney (Federalist)" },
+  { y: 1812, n: 16, w: "James Madison (Democratic-Republican)", o: "DeWitt Clinton (Federalist-backed)" },
+  { y: 1816, n: 17, w: "James Monroe (Democratic-Republican)", o: "Rufus King (Federalist)" },
+  { y: 1820, n: 17, w: "James Monroe (Democratic-Republican)", o: "No organized opposition" },
+  { y: 1824, n: 18, w: "John Quincy Adams", o: "Andrew Jackson; the House decides" },
+  { y: 1828, n: 18, p: 1, w: "Andrew Jackson (Democrat)", o: "John Quincy Adams (National Republican)", why: "Mass politics arrives. Most white men can now vote, turnout more than doubles, and the Democratic Party takes shape." },
+  { y: 1832, n: 18, w: "Andrew Jackson (Democrat)", o: "Henry Clay (National Republican)" },
+  { y: 1836, n: 19, w: "Martin Van Buren (Democrat)", o: "William Henry Harrison and other Whigs" },
+  { y: 1840, n: 19, w: "William Henry Harrison (Whig)", o: "Martin Van Buren (Democrat)" },
+  { y: 1844, n: 21, p: 1, w: "James K. Polk (Democrat)", o: "Henry Clay (Whig)", why: "Voters back expansion. Texas is annexed, Oregon is divided, and war with Mexico follows, reopening the question of slavery in the West." },
+  { y: 1848, n: 22, w: "Zachary Taylor (Whig)", o: "Lewis Cass (Democrat); Martin Van Buren (Free Soil)" },
+  { y: 1852, n: 23, w: "Franklin Pierce (Democrat)", o: "Winfield Scott (Whig)" },
+  { y: 1856, n: 24, w: "James Buchanan (Democrat)", o: "John C. Frémont (Republican); Millard Fillmore (Know-Nothing)" },
+  { y: 1860, n: 26, p: 1, w: "Abraham Lincoln (Republican)", o: "Stephen Douglas, John Breckinridge, John Bell", why: "Lincoln wins without a single Southern electoral vote. Seven Deep South states secede before he takes office." },
+  { y: 1864, n: 28, p: 1, w: "Abraham Lincoln (National Union)", o: "George McClellan (Democrat)", why: "The nation holds an election in the middle of a civil war. Voters, soldiers included, choose to fight on to victory and emancipation." },
+  { y: 1868, n: 30, p: 1, w: "Ulysses S. Grant (Republican)", o: "Horatio Seymour (Democrat)", why: "Hundreds of thousands of Black men in the South vote in a presidential election for the first time, and their votes help elect Grant." },
+  { y: 1872, n: 30, w: "Ulysses S. Grant (Republican)", o: "Horace Greeley (Liberal Republican and Democrat)" },
+  { y: 1876, n: 30, p: 1, w: "Rutherford B. Hayes (Republican)", o: "Samuel Tilden (Democrat); result disputed", why: "Disputed returns are settled by the Compromise of 1877. Federal troops leave the South, and Reconstruction ends." }
+];
+ELECTIONS.forEach(e => e.id = "el-" + e.y);
+
+// Starter text for each event's detail card: [what happened, why it matters]. The instructor can replace either from the card.
+const DESC = {
+  "Columbus reaches the Americas": ["Sailing for Spain, Christopher Columbus lands in the Bahamas and then Hispaniola, believing he has reached Asia.", "Begins lasting contact between Europe and the Americas and the Columbian Exchange of plants, animals, and diseases."],
+  "Spain conquers the Aztec Empire": ["Hernán Cortés and thousands of Native allies invade the Aztec Empire. Tenochtitlan falls in 1521, already weakened by smallpox.", "Gold and silver from the Americas make Spain Europe's richest power and push its rivals to seek colonies of their own."],
+  "Cabeza de Vaca shipwrecked in Texas": ["Survivors of a failed Spanish expedition wash ashore near Galveston Island. Cabeza de Vaca spends eight years crossing the Southwest on foot.", "His account is one of the first European descriptions of Texas and its Native peoples, and it inspired later Spanish expeditions."],
+  "Spain founds St. Augustine": ["Spain builds a fort on Florida's Atlantic coast to protect its treasure fleets.", "The oldest continuously occupied European settlement in the United States, founded 42 years before Jamestown."],
+  "Jamestown founded": ["The Virginia Company lands about 100 men on the James River. Most die in the first years from disease and starvation.", "The first permanent English colony in North America."],
+  "Tobacco becomes Virginia's cash crop": ["John Rolfe grows a sweeter strain of tobacco that sells well in England.", "Tobacco makes Virginia profitable and creates a hunger for land and labor that drives servitude and then slavery."],
+  "Enslaved Africans arrive; House of Burgesses meets": ["About 20 enslaved Africans arrive at Point Comfort, Virginia. The same year, the House of Burgesses meets as the first elected assembly in English America.", "Two roots of American history, slavery and representative government, appear in the same colony in the same year."],
+  "Mayflower Compact": ["Before landing at Plymouth, the Pilgrim men sign an agreement to form a government and obey its laws.", "An early example of self-government by the consent of the governed."],
+  "Puritans found Massachusetts Bay": ["John Winthrop leads about 1,000 Puritans to found Boston, hoping to build a model Christian community, a “city upon a hill.”", "Puritan ideas about community, education, and moral mission shape New England and later American identity."],
+  "Roger Williams founds Rhode Island": ["Banished from Massachusetts for his religious views, Roger Williams founds Providence.", "Rhode Island separates church and state and allows freedom of religion, an idea later written into the First Amendment."],
+  "William Penn founds Pennsylvania": ["King Charles II grants William Penn, a Quaker, a colony to repay a debt owed to Penn's father.", "Pennsylvania offers religious toleration and fairer dealings with the Lenape, which draws settlers from many backgrounds."],
+  "Powhatan uprising in Virginia": ["Powhatan warriors led by Opechancanough attack the English settlements, killing about a quarter of the colonists.", "Years of war follow, and the Virginia Company loses its charter. Virginia becomes a royal colony in 1624."],
+  "Pequot War": ["English colonists and their Native allies fight the Pequot in Connecticut, including a massacre at Mystic.", "The war breaks Pequot power and opens southern New England to English expansion."],
+  "King Philip's War": ["Metacom, called King Philip by the English, leads a Wampanoag-led coalition against New England's colonists.", "For its population, one of the deadliest wars in American history. It ends Native independence in southern New England."],
+  "Pueblo Revolt": ["Led by Popé, Pueblo peoples drive the Spanish out of New Mexico.", "The most successful Native revolt against colonization. When Spain returns in 1692, it allows more Pueblo religious practice."],
+  "Virginia: slave status follows the mother": ["A Virginia law declares that a child born to an enslaved mother is also enslaved.", "Slavery becomes inherited, passed down from generation to generation."],
+  "Bacon's Rebellion": ["Nathaniel Bacon leads poor white and Black Virginians against Governor Berkeley and against Native peoples. The rebels burn Jamestown.", "Frightened planters turn from indentured servants to enslaved Africans and draw sharper lines by race."],
+  "Virginia slave codes": ["Virginia gathers its slave laws into one code that treats enslaved people as property.", "Race-based slavery is now fully written into colonial law."],
+  "Stono Rebellion": ["Enslaved people near Charleston, South Carolina, rise up and march toward Spanish Florida. Dozens are killed.", "The largest slave revolt in the British colonies. South Carolina responds with harsher laws."],
+  "Salem witch trials": ["Accusations of witchcraft in Salem Village lead to the hanging of 19 people.", "Shows how fear, religion, and local conflict could combine. The trials weakened Puritan authority."],
+  "Georgia, the 13th colony, founded": ["James Oglethorpe founds Georgia as a buffer against Spanish Florida and a fresh start for poor English settlers.", "The last of the 13 colonies. Georgia banned slavery at first but allowed it by 1751."],
+  "Zenger trial": ["New York printer John Peter Zenger is tried for criticizing the royal governor, and a jury finds him not guilty.", "An early step toward freedom of the press."],
+  "Great Awakening": ["Preachers such as George Whitefield and Jonathan Edwards lead emotional revivals across the colonies.", "Encourages people to question authority and gives the colonies their first shared experience."],
+  "French and Indian War begins": ["Britain and France, each with Native allies, fight for control of the Ohio Valley. A young George Washington fights in the first battles.", "Part of a worldwide war, the Seven Years' War, that leaves Britain deep in debt."],
+  "Treaty of Paris ends the war": ["France gives Canada and its land east of the Mississippi to Britain, and Louisiana to Spain.", "Britain now rules a huge empire, and its efforts to pay for and control it set off the imperial crisis."],
+  "Proclamation Line closes the West": ["Britain bans colonial settlement west of the Appalachian Mountains to avoid more wars with Native nations.", "Colonists who wanted western land see Britain as blocking their future."],
+  "Stamp Act": ["Parliament taxes printed materials in the colonies, from newspapers to playing cards.", "The first direct tax on the colonies sets off protests, boycotts, and the cry “no taxation without representation.”"],
+  "Townshend Acts": ["Parliament taxes imports such as glass, lead, paint, paper, and tea.", "Colonists answer with boycotts of British goods, and women's spinning bees make homemade cloth a political act."],
+  "Boston Massacre": ["British soldiers fire into a crowd in Boston, killing five people, including Crispus Attucks.", "Patriot writers and artists turn the event into a symbol of British tyranny."],
+  "Boston Tea Party": ["Protesters disguised as Mohawks dump 342 chests of East India Company tea into Boston Harbor.", "Britain answers with the Intolerable Acts, which push the colonies toward united resistance."],
+  "Intolerable Acts; First Continental Congress": ["Parliament closes Boston's port and limits self-government in Massachusetts. Twelve colonies send delegates to Philadelphia.", "The colonies begin acting together for the first time."],
+  "Lexington and Concord": ["British troops march to seize militia weapons and exchange fire with colonists at Lexington and Concord.", "The “shot heard round the world” starts the Revolutionary War."],
+  "Paine's Common Sense": ["Thomas Paine's pamphlet argues in plain language for independence and against rule by kings.", "Read and shared widely, it convinced many ordinary colonists that independence was right."],
+  "Declaration of Independence": ["The Continental Congress adopts Thomas Jefferson's draft on July 4, 1776.", "It declares that all men are created equal with unalienable rights, a promise that later groups used to demand their own rights."],
+  "Battle of Saratoga": ["An American army forces a British army under General Burgoyne to surrender in New York.", "The turning point of the war: the victory convinces France to join the American side."],
+  "Alliance with France": ["France signs a treaty of alliance with the United States.", "French money, troops, and especially its navy make American victory possible."],
+  "Victory at Yorktown": ["American and French forces trap General Cornwallis's army in Virginia, and he surrenders.", "The last major battle of the war. Britain begins peace talks."],
+  "Treaty of Paris recognizes independence": ["Britain recognizes American independence, with a western border at the Mississippi River.", "The new nation doubles in size, but Native nations, who were not at the table, lose the most."],
+  "Articles of Confederation take effect": ["The first national government: a Congress with no power to tax, regulate trade, or enforce its laws.", "Its weaknesses lead to calls for a new constitution."],
+  "Shays' Rebellion": ["Massachusetts farmers facing debt and the loss of their farms close courts in an armed uprising.", "Convinces many leaders that the national government is too weak."],
+  "Constitution written; Northwest Ordinance": ["Delegates in Philadelphia write the Constitution. Congress passes the Northwest Ordinance for the lands north of the Ohio River.", "The Constitution creates the federal system still in use. The Ordinance sets how territories become states and bans slavery there."],
+  "Constitution ratified": ["New Hampshire becomes the ninth state to ratify, putting the Constitution into effect.", "Debates between Federalists and Anti-Federalists lead to the promise of a Bill of Rights."],
+  "Washington becomes president": ["George Washington takes the oath of office in New York City.", "He sets precedents such as the cabinet and the simple title “Mr. President.”"],
+  "Bill of Rights ratified": ["The first ten amendments are ratified, protecting freedoms such as speech, religion, and trial by jury.", "Fulfills the promise that won over Anti-Federalists and still defines Americans' basic rights."],
+  "First Bank of the United States": ["Alexander Hamilton's plan creates a national bank to hold government money and steady the nation's credit.", "The fight over whether the bank was constitutional splits Hamilton and Jefferson and helps create the first parties."],
+  "Whiskey Rebellion": ["Pennsylvania farmers resist a federal tax on whiskey. Washington leads militia to end the revolt.", "Shows that the new government can enforce its laws, which it could not do under the Articles."],
+  "Washington's Farewell Address": ["Washington announces he will not seek a third term and warns against political parties and permanent foreign alliances.", "Sets the two-term tradition that lasted until 1940."],
+  "Alien and Sedition Acts": ["Federalists pass laws that make it harder to become a citizen and make it a crime to criticize the government.", "Jefferson and Madison answer with the Virginia and Kentucky Resolutions, arguing that states can judge federal laws."],
+  "Marbury v. Madison": ["Chief Justice John Marshall rules that part of a federal law is unconstitutional.", "Establishes judicial review: the Supreme Court can strike down laws that violate the Constitution."],
+  "Louisiana Purchase": ["Jefferson buys about 828,000 square miles from France for $15 million.", "Doubles the size of the nation and secures the Mississippi River and New Orleans."],
+  "Lewis and Clark expedition": ["Meriwether Lewis, William Clark, and the Corps of Discovery, guided in part by Sacagawea, travel to the Pacific and back.", "Maps the West, makes contact with dozens of Native nations, and strengthens U.S. claims to Oregon."],
+  "12th Amendment: separate electoral votes for president and vice president": ["Electors now cast one vote for president and a separate vote for vice president.", "Fixes the problem behind the 1800 Jefferson–Burr tie and fits the Constitution to party politics."],
+  "Atlantic slave trade banned": ["Congress bans bringing enslaved people into the United States, the earliest date the Constitution allowed.", "Slavery keeps growing anyway, through births and a booming slave trade inside the country."],
+  "Embargo Act": ["Jefferson stops American ships from trading with foreign ports to stay out of the war between Britain and France.", "It hurts the American economy, especially New England, far more than it hurts Europe."],
+  "Battle of Tippecanoe": ["U.S. forces under William Henry Harrison attack Prophetstown, the center of Tecumseh's Native confederacy.", "Pushes Tecumseh into alliance with Britain in the War of 1812."],
+  "War of 1812 begins": ["The United States declares war on Britain over the seizure of American sailors, trade restrictions, and British support for Native resistance.", "The British burn Washington in 1814, but the war ends in a draw and boosts national pride."],
+  "Battle of New Orleans": ["Andrew Jackson's army defeats a British attack, two weeks after the peace treaty was signed in Europe.", "Makes Jackson a national hero."],
+  "McCulloch v. Maryland": ["The Supreme Court rules that Congress could create a national bank and that states cannot tax it.", "Strengthens federal power over the states."],
+  "Missouri Compromise": ["Missouri enters as a slave state and Maine as a free state. Slavery is banned north of 36°30′ in the rest of the Louisiana Purchase.", "Keeps the balance of slave and free states for 30 years. Jefferson calls the crisis “a fire bell in the night.”"],
+  "Monroe Doctrine": ["President Monroe warns European powers not to start new colonies in the Americas.", "Becomes a lasting principle of U.S. foreign policy."],
+  "Indian Removal Act": ["Congress gives President Jackson power to trade for Native lands in the East and move nations west of the Mississippi.", "Leads to the forced removal of the Cherokee, Creek, Choctaw, Chickasaw, and Seminole nations."],
+  "Nullification Crisis": ["South Carolina declares federal tariffs void inside the state, and Jackson threatens to use force.", "A compromise tariff ends the crisis, but the idea that states can reject federal law returns in 1860."],
+  "Trail of Tears": ["The U.S. Army forces about 16,000 Cherokee from their homes in Georgia to Indian Territory. Thousands die on the way.", "Shows the human cost of removal, even after the Supreme Court sided with the Cherokee in 1832."],
+  "Cotton gin invented": ["Eli Whitney's machine quickly separates seeds from short-staple cotton.", "Makes cotton hugely profitable and spreads slavery across the Deep South."],
+  "Erie Canal opens": ["A 363-mile canal links the Hudson River to the Great Lakes.", "Cuts shipping costs sharply and makes New York City the nation's leading port."],
+  "Nat Turner's rebellion": ["Nat Turner leads a revolt in Southampton County, Virginia, in which about 60 white people are killed.", "Southern states pass harsher slave codes and ban teaching enslaved people to read."],
+  "Panic of 1837": ["Bank failures and falling cotton prices start a long economic depression.", "Hurts President Van Buren and helps the Whigs win in 1840."],
+  "Garrison starts The Liberator": ["William Lloyd Garrison starts an antislavery newspaper that demands immediate emancipation.", "Marks a shift from gradual plans to an urgent abolitionist movement."],
+  "Frederick Douglass publishes his Narrative": ["Frederick Douglass, who escaped slavery in Maryland, publishes the story of his life.", "His book shows Northern readers the reality of slavery and makes him a leading abolitionist."],
+  "Seneca Falls Convention": ["Elizabeth Cady Stanton, Lucretia Mott, and about 300 others meet in New York to demand rights for women.", "Its Declaration of Sentiments, modeled on the Declaration of Independence, launches the women's rights movement."],
+  "Mexico independent; Austin's colony begins": ["Mexico wins independence from Spain and invites American settlers to Texas. Stephen F. Austin brings the first colonists.", "Begins Anglo-American settlement of Texas. Settlers soon outnumber Tejanos."],
+  "Texas Revolution: the Alamo and San Jacinto": ["Texas declares independence. Mexican forces take the Alamo, and Sam Houston's army wins at San Jacinto.", "Texas becomes an independent republic that allows slavery."],
+  "Texas annexed": ["Congress annexes Texas, and it becomes the 28th state.", "Mexico never accepted Texas independence, so annexation leads toward war."],
+  "Mexican-American War begins": ["After a clash in disputed land near the Rio Grande, the United States declares war on Mexico.", "Critics, including Congressman Abraham Lincoln, call it a war to spread slavery."],
+  "Wilmot Proviso": ["A proposal to ban slavery in any land taken from Mexico.", "It passes the House but not the Senate, and it splits Congress by section instead of by party."],
+  "Treaty of Guadalupe Hidalgo": ["Mexico gives up about half its land, including California and the Southwest, for $15 million.", "Reopens the fight over whether slavery can spread into new territory."],
+  "California Gold Rush": ["Gold found at Sutter's Mill draws about 300,000 people to California.", "California quickly asks to join as a free state, setting off the crisis of 1850."],
+  "Compromise of 1850; Fugitive Slave Act": ["California enters as a free state, and a strict new Fugitive Slave Act requires Northerners to help return people who escaped slavery.", "Delays secession for a decade, but the Fugitive Slave Act angers many Northerners."],
+  "Uncle Tom's Cabin": ["Harriet Beecher Stowe's novel shows the cruelty of slavery through the lives of enslaved families.", "Sells hundreds of thousands of copies and turns many Northern readers against slavery."],
+  "Kansas-Nebraska Act": ["Stephen Douglas's law lets settlers in Kansas and Nebraska vote on slavery, repealing the Missouri Compromise line.", "Helps destroy the Whig Party and leads directly to violence in Kansas."],
+  "Republican Party forms": ["Antislavery Whigs, Free Soilers, and Democrats form a new party to stop the spread of slavery.", "Within six years it wins the presidency."],
+  "Bleeding Kansas; Sumner caned": ["Proslavery and antislavery settlers fight in Kansas. In the Senate, Preston Brooks beats Charles Sumner with a cane.", "Violence over slavery spreads from the territories to Congress itself."],
+  "Dred Scott decision": ["The Supreme Court rules that Black Americans are not citizens and that Congress cannot ban slavery in the territories.", "Outrages Northerners and makes compromise on slavery's expansion nearly impossible."],
+  "Lincoln-Douglas debates": ["In seven debates for an Illinois Senate seat, Lincoln and Douglas argue over the spread of slavery.", "Douglas wins the seat, but the debates make Lincoln known across the country."],
+  "John Brown's raid": ["Abolitionist John Brown seizes the federal arsenal at Harpers Ferry, Virginia, hoping to start an uprising of enslaved people.", "He is hanged. Many Northerners call him a martyr, and white Southerners fear a Northern plot."],
+  "South Carolina secedes": ["In December, after Lincoln's election, South Carolina votes to leave the Union.", "Six more Deep South states follow by February 1861."],
+  "Texas secedes; Confederacy formed": ["Texas votes to secede over Governor Sam Houston's objections. The seceded states form the Confederate States of America.", "The Confederacy chooses Jefferson Davis as president and protects slavery in its constitution."],
+  "Fort Sumter: the war begins": ["In April, Confederate guns fire on the federal fort in Charleston Harbor, and it surrenders.", "The Civil War begins. Four more states secede, for eleven in all."],
+  "First Battle of Bull Run": ["The first major battle, fought in northern Virginia, ends in a Union retreat.", "Both sides realize the war will be long and costly."],
+  "Battle of Antietam": ["In Maryland, the bloodiest single day in American history stops Lee's invasion of the North.", "Gives Lincoln the victory he needs to announce the Emancipation Proclamation."],
+  "Emancipation Proclamation": ["Lincoln declares enslaved people in Confederate-held areas free and opens the Union army to Black men.", "Makes the war a fight against slavery. About 180,000 Black soldiers serve in the Union army."],
+  "Gettysburg and Vicksburg": ["In July, the Union defeats Lee at Gettysburg and captures Vicksburg on the Mississippi River.", "The turning point of the war. The Confederacy is cut in two."],
+  "Sherman's March to the Sea": ["General Sherman's army captures Atlanta and marches to Savannah, destroying railroads, crops, and property.", "Total war breaks Southern morale and helps Lincoln win re-election."],
+  "Appomattox; Lincoln assassinated": ["Lee surrenders to Grant in April. Days later, John Wilkes Booth assassinates Lincoln.", "The war ends, and Reconstruction begins without Lincoln."],
+  "Juneteenth in Galveston": ["On June 19, Union General Gordon Granger announces in Galveston that all enslaved people in Texas are free.", "Celebrated as a day of freedom ever since, and a federal holiday since 2021."],
+  "13th Amendment abolishes slavery": ["The amendment ending slavery throughout the United States is ratified in December.", "Ends slavery nationwide, except as punishment for a crime."],
+  "Freedmen's Bureau; Black Codes": ["Congress creates the Freedmen's Bureau to help formerly enslaved people. Southern states pass Black Codes that limit their freedom.", "Shows the struggle over what freedom would mean in practice."],
+  "Civil Rights Act of 1866": ["Congress declares everyone born in the United States a citizen, overriding President Johnson's veto.", "The first major federal civil rights law. Its ideas go into the 14th Amendment."],
+  "Reconstruction Acts": ["Congress divides the South into five military districts and requires new state constitutions that let Black men vote.", "Begins Radical Reconstruction. Black men vote and hold office in the South for the first time."],
+  "14th Amendment": ["Grants citizenship to everyone born in the United States and promises equal protection of the laws.", "The basis of most later civil rights cases."],
+  "15th Amendment": ["Bars states from denying the vote because of race.", "Southern states later get around it with poll taxes, literacy tests, and violence."],
+  "Ku Klux Klan Act": ["Gives the president power to use troops against the Ku Klux Klan's campaign of terror.", "Federal prosecutions break the first Klan, but violence against Black Southerners continues."],
+  "Colfax Massacre; Panic of 1873": ["A white militia kills dozens of Black men in Colfax, Louisiana. A financial panic starts a long depression.", "Violence and economic hard times weaken Northern support for Reconstruction."],
+  "Compromise of 1877": ["Democrats accept Hayes as president, and Republicans agree to remove federal troops from the South.", "Ends Reconstruction. White Southern Democrats regain control, and Black rights are rolled back for decades."]
+};
+
+const EXAMPLES = [
+  { who: "Example student", y: 1718, t: "Spain founds San Antonio", why: "The mission and presidio made San Antonio the center of Spanish Texas, so Texas had Spanish roots a century before Anglo settlers arrived.", rel: "Similar to", link: "1565 · Spain founds St. Augustine", src: "Texas State Historical Association, Handbook of Texas", ex: true },
+  { who: "Example student", y: 1862, t: "Homestead Act", why: "With Southern members gone, Congress gave 160 acres of western land to settlers who farmed it for five years.", rel: "Caused by", link: "1861 · Fort Sumter: the war begins", src: "Course textbook, chapter 14", ex: true }
+];
+// Shared store: one document per student at entries/<their id>: { name, items: [...] }
+let mine = [];      // every student's entries, plotted on the class timeline
+let myItems = [];   // this viewer's own entries
+let docs = [];
+let db = null, userApi = null, uid = null, isTeacher = false, saving = false;
+const use = (n) => (window.claude && window.claude.use) ? window.claude.use(n) : Promise.resolve(null);
+const str = (v) => typeof v === "string" ? v : "";
+const cleanItems = (items) => (Array.isArray(items) ? items : []).filter(i => i && Number.isFinite(i.y) && typeof i.t === "string");
+
+let cur = 1, scale = "eq";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const eraById = (id) => ERAS.find(e => e.id === id);
+const eraOfYear = (y) => ERAS.slice().reverse().find(e => y >= e.start) || ERAS[0];
+const eraIdx = (id) => ERAS.findIndex(e => e.id === id);
+
+function makeX(L, R) {
+  const total = ERAS.slice(1).reduce((s, e) => s + e.end - e.start, 0);
+  const w = ERAS.map((e, i) => i === 0 ? 0.07 : scale === "eq" ? 0.93 / 5 : 0.93 * (e.end - e.start) / total);
+  return (y) => {
+    let acc = 0;
+    for (let i = 0; i < ERAS.length; i++) {
+      const e = ERAS[i];
+      if (y <= e.end || i === ERAS.length - 1) return L + (acc + w[i] * Math.min(1, Math.max(0, (y - e.start) / (e.end - e.start)))) * (R - L);
+      acc += w[i];
+    }
+  };
+}
+
+// Class progress: live/state = { lecture, ids: [items added so far in that lecture], at }.
+let LIVE = null, room = null, userScrubbed = false;
+const placedIn = (item, lec, live) => item.n < lec || (item.n === lec && (!live || live.lecture !== lec || live.ids.includes(item.id)));
+const builderPlaced = (item) => placedIn(item, cur, LIVE);
+
+function renderChart() { drawTimeline($("#chart"), cur, builderPlaced, true); }
+
+function drawTimeline(svg, lecN, placed, showMine) {
+  const W = 1000, L = 24, R = 976;
+  const lec = LECTURES[lecN - 1];
+  const fresh = ALL.filter(a => a.n === lecN && placed(a));
+  const pending = ALL.filter(a => a.n === lecN).length - fresh.length;
+  const hit = (cx, cy, attr) => `<circle class="hit" cx="${cx}" cy="${cy}" r="9" ${attr}/>`;
+  const LY = 30 + Math.max(fresh.length, 2) * 17 + 18;
+  const RY = LY + 90;
+  const H = RY + 46;
+  const x = makeX(L, R);
+  let s = "";
+  ERAS.forEach((e, i) => {
+    const x1 = x(e.start), x2 = x(e.end);
+    s += `<rect x="${x1}" y="${LY - 8}" width="${x2 - x1}" height="16" fill="color-mix(in srgb, var(--e-${e.id}) ${i === 0 ? 14 : 22}%, var(--surface))"/>`;
+    const mid = (x1 + x2) / 2, room = x2 - x1;
+    const label = room > e.short.length * 7.2 ? e.short : room > 34 ? e.short.split(/[ &]/)[0].slice(0, 6) + "." : "";
+    s += `<text class="eraname" x="${mid}" y="${LY + 46 + (scale === "true" && i >= 4 ? 14 : 0)}" text-anchor="middle" fill="var(--e-${e.id})" style="fill:var(--e-${e.id})">${esc(scale === "true" && i >= 4 ? e.short : label)}</text>`;
+  });
+  ERAS.forEach((e, i) => {
+    s += `<line class="bound" x1="${x(e.start)}" x2="${x(e.start)}" y1="${LY - 12}" y2="${LY + 14}"/>`;
+    s += `<text x="${x(e.start)}" y="${LY + 28}" text-anchor="${i === 0 ? "start" : "middle"}">${e.start}</text>`;
+  });
+  s += `<line class="bound" x1="${R}" x2="${R}" y1="${LY - 12}" y2="${LY + 14}"/><text x="${R}" y="${LY + 28}" text-anchor="end">1877</text>`;
+  s += `<text class="eraname" x="${L}" y="${RY + 4}" style="fill:var(--muted)">Presidential elections</text>`;
+  s += `<line class="rail" x1="${x(1788)}" x2="${x(1876)}" y1="${RY}" y2="${RY}"/>`;
+  ELECTIONS.forEach(el => {
+    const ex = x(el.y), on = placed(el), cls = (on ? "" : " off") + (on && el.n === lecN ? " new" : "");
+    const tip = `<title>${el.y} · ${esc(el.w)}${el.p ? " · pivotal election" : ""}</title>`;
+    s += el.p
+      ? `<rect class="pivot${cls}" x="${ex - 4.5}" y="${RY - 4.5}" width="9" height="9" transform="rotate(45 ${ex} ${RY})">${tip}</rect>`
+      : `<line class="etick${cls}" x1="${ex}" x2="${ex}" y1="${RY - 6}" y2="${RY + 6}">${tip}</line>`;
+    if (on) s += `<text class="elbl${el.p ? " pv" : ""}" transform="translate(${ex} ${RY + 10}) rotate(-90)" text-anchor="end" dy="3.5" data-el="${el.id}">${el.y}</text>` + hit(ex, RY, `data-el="${el.id}"`);
+  });
+  ALL.filter(placed).forEach(e => { s += hit(x(e.y), LY, `data-ev="${e.id}"`); });
+  ALL.filter(e => e.n < lecN).forEach(e => {
+    s += `<circle class="tick${e.a ? " anchor" : ""}${offType(e.k) ? " dim" : ""}" cx="${x(e.y)}" cy="${LY}" r="${e.a ? 5 : 3.6}" fill="var(--e-${e.era})" data-ev="${e.id}"><title>${e.y} · ${esc(e.t)} · ${TYPES[e.k]}</title></circle>`;
+  });
+  if (showMine) mine.forEach(m => {
+    const cx = x(m.y);
+    s += `<rect class="mine" x="${cx - 4}" y="${LY - 4}" width="8" height="8" transform="rotate(45 ${cx} ${LY})" data-en="${esc(m.uid + ":" + m.id)}"><title>${m.y} · ${esc(m.t)} (${m.who ? esc(m.who) : "student entry"})</title></rect>`;
+  });
+  fresh.forEach((e, i) => {
+    const cx = x(e.y), ty = 26 + i * 17, right = cx > W * 0.62;
+    s += `<line class="lead" x1="${cx}" x2="${cx}" y1="${ty + 4}" y2="${LY - 7}"/>`;
+    s += `<text class="evlbl" x="${cx + (right ? -6 : 6)}" y="${ty}" text-anchor="${right ? "end" : "start"}" data-ev="${e.id}"><tspan class="y">${e.y}</tspan> ${esc(e.t)}</text>`;
+    s += `<circle class="tick new${offType(e.k) ? " dim" : ""}" cx="${cx}" cy="${LY}" r="${e.a ? 6.5 : 5}" fill="var(--e-${lec.era})" data-ev="${e.id}"><title>${e.y} · ${esc(e.t)} · ${TYPES[e.k]}</title></circle>`;
+  });
+  if (!fresh.length) {
+    const msg = pending ? `Lecture ${lecN}: events appear here as they are added in class.`
+      : lecN === 1 ? "Lecture 1 sets the frame: five eras and the years where they meet." : `All ${ALL.length} lecture events are placed. Now build it from memory.`;
+    s += `<text class="note" x="${L}" y="34">${msg}</text>`;
+  }
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = s;
+}
+
+function renderLecture() {
+  const l = LECTURES[cur - 1], e = eraById(l.era);
+  const due = (DUE[l.n] || []).slice();
+  if (l.n % 2 === 0 && l.wk >= 2 && l.wk <= 15) due.unshift(`Weekly Timeline Check ${l.wk - 1}`);
+  const placed = ALL.filter(builderPlaced).length;
+  const els = ELECTIONS.filter(x => x.n === l.n);
+  $("#counter").textContent = `Lecture ${cur} of 31 · ${placed} events placed`;
+  $("#lecture").style.setProperty("--c", `var(--e-${l.era})`);
+  $("#lecture").innerHTML = `
+    <div>
+      <div class="eyebrow" style="color:var(--e-${l.era})">Week ${l.wk} · Lecture ${l.n} · ${esc(e.name)}</div>
+      <h3>${esc(l.title)}</h3>
+      <p class="question">${esc(l.q)}</p>
+      ${l.ev.length ? `<span class="label" style="margin-top:18px">Adds to the timeline</span><ul class="adds" style="margin-top:0">${l.ev.map(([y, t, a, k]) => { const id = `ev-${y}-${slug(t)}`, ok = builderPlaced({ id, n: l.n }); return `<li class="${ok ? "click" : "locked"}${offType(k) ? " dim" : ""}" ${ok ? `role="button" tabindex="0" data-ev="${id}"` : ""}><span class="yr" style="color:var(--e-${l.era})">${y}</span><span>${esc(t)}<span class="type-tag">${TYPES[k]}</span>${a ? `<span class="anchor-badge">Anchor</span>` : ""}${isAmendment(t) ? `<span class="anchor-badge pivot-badge">Amendment</span>` : ""}${ok ? "" : `<span class="soon">Coming up</span>`}</span></li>`; }).join("")}</ul>`
+        : `<p class="frame-note">${cur === 1 ? "Adds the frame: a line from 1492 to 1877, the five eras, and the six boundary years. Students draw it in their notebooks and keep adding to it all semester." : "Adds nothing new. Students rebuild the whole timeline in pairs from memory, then check it against the class timeline."}</p>`}
+      ${els.length ? `<span class="label" style="margin-top:18px">Adds to the election rail</span><ul class="adds" style="margin-top:0">${els.map(e => `<li class="${builderPlaced(e) ? "click" : "locked"}" ${builderPlaced(e) ? `role="button" tabindex="0" data-el="${e.id}"` : ""}><span class="yr">${e.y}</span><span>${esc(e.w)} · <span class="fine">${esc(e.o)}</span>${e.p ? `<span class="anchor-badge pivot-badge">Pivotal</span><br><span class="fine">${esc(e.why)}</span>` : ""}</span></li>`).join("")}</ul>` : ""}
+    </div>
+    <div class="lec-side">
+      <div class="skill"><span class="label">Timeline skill</span><p>${esc(l.skill)}</p></div>
+      <div><span class="label">Due</span>${due.length ? `<ul class="due">${due.map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : `<p class="fine">Nothing due.</p>`}</div>
+      ${isOwnerV ? `<div class="mynotes"><span class="label">Your lecture notes · only you can see these</span>${LNOTES[l.n] ? `<p class="preview">${esc(LNOTES[l.n].slice(0, 180))}${LNOTES[l.n].length > 180 ? "…" : ""}</p>` : `<p class="fine">No notes yet for this lecture.</p>`}<button class="btn" data-ln="${l.n}">${LNOTES[l.n] ? "Open notes" : "Add notes"}</button></div>` : ""}
+    </div>`;
+  $("#prev").disabled = cur === 1;
+  $("#next").disabled = cur === 31;
+  $("#lec").value = cur;
+}
+
+function renderSofar() {
+  const html = ERAS.map(e => {
+    const evs = ALL.filter(a => a.era === e.id);
+    const done = evs.filter(builderPlaced).map(a => ({ ...a, isNew: a.n === cur }));
+    const myName = $("#f-student").value.trim();
+    const yours = myItems.filter(m => eraOfYear(m.y).id === e.id).map(m => ({ y: m.y, t: m.t, who: myName, mine: true, key: uid + ":" + m.id }));
+    const classCount = mine.filter(m => eraOfYear(m.y).id === e.id).length;
+    const rows = done.concat(yours).sort((a, b) => a.y - b.y);
+    const left = evs.length - done.length;
+    if (!rows.length && !left) return "";
+    return `<div class="era-block" style="--c:var(--e-${e.id})">
+      <h4>${esc(e.name)}</h4>
+      <div class="meta">${e.start}–${e.end} · ${done.length} of ${evs.length} lecture events${classCount ? ` · ${classCount} class entr${classCount === 1 ? "y" : "ies"}` : ""}</div>
+      ${rows.map(r => `<div class="row click${r.a ? " anchor" : ""}${r.isNew ? " new" : ""}${r.mine ? " mine" : ""}${r.k && offType(r.k) ? " dim" : ""}" role="button" tabindex="0" ${r.mine ? `data-en="${esc(r.key)}"` : `data-ev="${r.id}"`}><span class="y">${r.y}</span><span class="t">${esc(r.t)}${r.k ? `<span class="tt" title="${TYPES[r.k]}">${TYPES[r.k].split(" ")[0].slice(0, 4).toUpperCase()}</span>` : ""}${r.mine ? (r.who ? ` (${esc(r.who)})` : " (student entry)") : ""}</span></div>`).join("")}
+      ${left ? `<div class="more">${rows.length ? "+ " : ""}${left} event${left === 1 ? "" : "s"} in later lectures</div>` : ""}
+    </div>`;
+  }).join("");
+  $("#sofar").innerHTML = html;
+}
+
+function entryCard(m, who, removable) {
+  const e = eraOfYear(m.y);
+  return `<div class="entry-card" style="--c:var(--e-${e.id})">
+    <div class="top"><b><span>${m.y}</span>${esc(m.t)}${m.ex ? `<span class="ex">Example</span>` : ""}</b>${removable ? `<button class="rm" data-id="${esc(str(m.id))}">Remove</button>` : ""}</div>
+    <span class="fine">${who ? `Added by ${esc(who)} · ` : ""}${esc(e.name)}${m.at ? ` · ${esc(new Date(m.at).toLocaleDateString())}` : ""}</span>
+    <span>${esc(str(m.why))}</span>
+    <span class="link">${esc(str(m.rel))} ${esc(str(m.link))}${m.src ? ` · Source: ${esc(str(m.src))}` : ""}</span>
+  </div>`;
+}
+
+function renderEntries() {
+  const box = $("#entries");
+  if (!myItems.length) {
+    box.innerHTML = `<p class="fine">Your entries will appear here. Two examples:</p>` + EXAMPLES.map(m => entryCard(m, m.who, false)).join("");
+    return;
+  }
+  box.innerHTML = myItems.slice().sort((a, b) => a.y - b.y).map(m => entryCard(m, $("#f-student").value.trim(), true)).join("");
+  box.querySelectorAll(".rm").forEach(b => b.onclick = () => confirmThen(b, async () => {
+    const prev = myItems;
+    myItems = myItems.filter(i => i.id !== b.dataset.id);
+    try { await saveMine(); } catch (e) { myItems = prev; $("#f-err").textContent = "Couldn't remove the entry. Check your connection and try again."; renderEntries(); }
+  }));
+}
+
+function confirmThen(btn, fn) {
+  if (btn.dataset.armed) { fn(); return; }
+  btn.dataset.armed = "1";
+  btn.textContent = "Click again to remove";
+  setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = "Remove"; } }, 4000);
+}
+
+async function saveMine() {
+  const name = $("#f-student").value.trim() || str((docs.find(d => d.uid === uid) || {}).name);
+  await db.doc("entries/" + uid).set({ name, items: myItems, updatedAt: new Date().toISOString() });
+}
+
+async function renderTeacher() {
+  if (!isTeacher) return;
+  const filt = $("#t-era").value;
+  const students = docs.filter(d => d.items.length).sort((a, b) => str(a.name).localeCompare(str(b.name)));
+  let acct = {};
+  try { if (userApi && students.length) acct = await userApi.profiles(students.map(s => s.uid)) || {}; } catch (e) {}
+  const total = students.reduce((s, d) => s + d.items.length, 0);
+  $("#t-sum").textContent = total ? `${total} entr${total === 1 ? "y" : "ies"} from ${students.length} student${students.length === 1 ? "" : "s"}. Click a student's entries below to review them.` : "No entries yet. They appear here as students submit them.";
+  $("#t-body").innerHTML = students.map(d => {
+    const counts = ERAS.map(e => d.items.filter(i => eraOfYear(i.y).id === e.id).length);
+    return `<tr><td>${esc(str(d.name) || "No name")}</td><td class="fine">${esc((acct[d.uid] && acct[d.uid].name) || "")}</td>${counts.map(c => `<td class="num${c ? "" : " zero"}">${c}</td>`).join("")}<td class="num"><b>${d.items.length}</b></td></tr>`;
+  }).join("");
+  $("#t-detail").innerHTML = students.map(d => {
+    const items = d.items.filter(i => !filt || eraOfYear(i.y).id === filt).sort((a, b) => a.y - b.y);
+    if (!items.length) return "";
+    return `<div class="t-student" data-uid="${esc(d.uid)}"><h4>${esc(str(d.name) || "No name")} <span>${items.length} entr${items.length === 1 ? "y" : "ies"}</span></h4>${items.map(m => entryCard(m, "", true)).join("")}</div>`;
+  }).join("");
+  $("#t-detail").querySelectorAll(".rm").forEach(b => b.onclick = () => confirmThen(b, async () => {
+    const d = docs.find(x => x.uid === b.closest(".t-student").dataset.uid);
+    if (!d) return;
+    try { await db.doc("entries/" + d.uid).set({ name: str(d.name), items: d.items.filter(i => i.id !== b.dataset.id), updatedAt: new Date().toISOString() }); }
+    catch (e) { b.textContent = "Couldn't remove"; }
+  }));
+}
+
+function lockForm(msg) {
+  $("#form").querySelectorAll("input, textarea, select, button").forEach(el => el.disabled = true);
+  $("#f-status").textContent = msg;
+}
+
+async function connect() {
+  const [dbNs, userNs] = await Promise.all([use("db"), use("user")]);
+  userApi = userNs;
+  let canWrite = null;
+  if (userNs) {
+    uid = await userNs.id();
+    isOwnerV = await userNs.isOwner();
+    isTeacher = isOwnerV || (await userNs.canEdit());
+    canWrite = await userNs.can("data.write");
+  }
+  if (!dbNs) { lockForm("Sign in to claude.ai to add entries to the class timeline."); return; }
+  db = dbNs;
+  if (canWrite === false || !uid) lockForm("You can see the class timeline, but you can't add entries yet. Ask your instructor for Contributor access.");
+  else $("#f-status").textContent = "Entries are saved to the class timeline.";
+  $("#teacher").hidden = !isTeacher;
+  db.doc("live/state").onSnapshot(snap => applyLive(snap.exists ? snap.data() : null), () => {});
+  use("room").then(r => { room = r; if (r) r.on("live", (msg) => applyLive(msg && msg.data)); });
+  renderLiveBar();
+  db.collection("entries").onSnapshot(snap => {
+    docs = snap.docs.map(d => { const v = d.data() || {}; return { uid: d.id, name: str(v.name), items: cleanItems(v.items) }; });
+    mine = docs.flatMap(d => d.items.map(i => ({ ...i, who: d.name || "Student", uid: d.uid })));
+    const me = docs.find(d => d.uid === uid);
+    myItems = me ? me.items.slice() : [];
+    if (me && me.name && !$("#f-student").value) $("#f-student").value = me.name;
+    renderEntries(); renderChart(); renderSofar(); renderTeacher();
+    if (openKey && openKey.startsWith("en:")) reopen();
+  }, () => { $("#f-status").textContent = "The class timeline didn't load. Reload the page to try again."; });
+  if (isOwnerV) {
+    document.querySelectorAll(".owner-only").forEach(el => el.hidden = false);
+    renderSched(); renderLecture();
+    db.collection("instructor").onSnapshot(snap => {
+      const next = {};
+      snap.docs.forEach(d => { const m = /^lecture-(\d+)$/.exec(d.id); const v = d.data() || {}; if (m && str(v.text)) next[+m[1]] = str(v.text); });
+      LNOTES = next;
+      renderSched(); renderLecture();
+    }, () => {});
+  }
+  db.collection("events").onSnapshot(snap => {
+    NOTES = {};
+    snap.docs.forEach(d => { const v = d.data() || {}; NOTES[d.id] = { what: str(v.what), why: str(v.why), read: str(v.read), notes: str(v.notes) }; });
+    if (openKey && !editing) reopen();
+  }, () => {});
+}
+
+function renderLinkOptions() {
+  $("#f-link").innerHTML = ANCHORS.map(a => { const v = `${a.y} · ${a.t}`; return `<option value="${esc(v)}">${esc(v)}</option>`; }).join("");
+}
+
+function renderSched() {
+  let html = "", lastEra = null;
+  LECTURES.forEach(l => {
+    if (l.era !== lastEra) {
+      const e = eraById(l.era);
+      html += `<tr class="era-row" style="--c:var(--e-${e.id})"><td colspan="5">${esc(e.name)} <span class="yrs">${e.start}–${e.end}</span></td></tr>`;
+      lastEra = l.era;
+    }
+    const due = (DUE[l.n] || []).map(d => `<b>${esc(d)}</b>`);
+    if (l.n % 2 === 0 && l.wk >= 2 && l.wk <= 15) due.unshift(`Timeline Check ${l.wk - 1}`);
+    html += `<tr><td>${l.n % 2 ? "Wk " + l.wk : ""}</td><td><button data-n="${l.n}">${l.n}. ${esc(l.title)}</button></td><td class="yrs">${l.ev.length ? l.ev.map(e => e[0]).filter((y, i, a) => a.indexOf(y) === i).join(", ") : "—"}${ELECTIONS.some(x => x.n === l.n) ? `<br>Elections: ${ELECTIONS.filter(x => x.n === l.n).map(x => x.p ? `<b style="color:var(--accent)">${x.y}</b>` : x.y).join(", ")}` : ""}</td><td class="duecell">${due.join("<br>")}</td>${isOwnerV ? `<td><button class="btn notes-btn" data-ln="${l.n}">${LNOTES[l.n] ? "Open notes" : "Add notes"}</button></td>` : ""}</tr>`;
+  });
+  $("#sched").innerHTML = html;
+  $("#sched").querySelectorAll("button[data-n]").forEach(b => b.onclick = () => { go(+b.dataset.n); document.querySelector(".builder").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); });
+}
+
+// Detail card for events, elections, and student entries
+let NOTES = {}, openKey = null, editing = false;
+
+// Instructor-only lecture notes, stored at instructor/lecture-<n> (owner read and write only)
+let LNOTES = {}, isOwnerV = false, lnTimer = null, lnSaving = false, lnDirty = false;
+
+function outlineFor(n) {
+  const l = LECTURES[n - 1];
+  const stops = ALL.filter(e => e.n === n).map((e, i) => `Stop ${i + 1}: ${e.y} ${e.t}${e.a ? " (anchor)" : ""}\n  Story:\n  5W card prompt:\n`);
+  const els = ELECTIONS.filter(e => e.n === n).map(e => `Election ${e.y}: ${e.w}${e.p ? " (pivotal)" : ""}\n`);
+  return `Lecture ${n}: ${l.title}\nGuiding question: ${l.q}\nTimeline skill: ${l.skill}\n\nWarm-up:\n\nSet the stage:\n\n${stops.join("\n")}${els.length ? "\n" + els.join("") : ""}\nPrimary source moment:\n\nClose:\n\nReminders:\n`;
+}
+
+function renderLectureNotes(n) {
+  const l = LECTURES[n - 1];
+  $("#detail").style.setProperty("--c", `var(--e-${l.era})`);
+  const text = LNOTES[n] || "";
+  $("#detail-body").innerHTML = `
+    <div class="eyebrow" style="color:var(--c)">Week ${l.wk} · Lecture ${n} · ${esc(eraById(l.era).name)}</div>
+    <h3>${esc(l.title)}</h3>
+    <span class="private-note">Only you can see these notes. Students and editors cannot open them.</span>
+    <div class="field"><label for="ln-text" class="label">Lecture notes</label><textarea id="ln-text" placeholder="Type your notes for this lecture. They save as you type.">${esc(text)}</textarea></div>
+    <div class="d-actions">
+      <button class="btn primary" id="ln-save">Save</button>
+      ${text ? "" : `<button class="btn" id="ln-outline">Start from the lecture outline</button>`}
+      <span class="fine" id="ln-status" role="status">${text ? "Saved" : ""}</span>
+    </div>`;
+  const ta = $("#ln-text");
+  lnDirty = false;
+  ta.oninput = () => { lnDirty = true; $("#ln-status").textContent = "Unsaved changes"; clearTimeout(lnTimer); lnTimer = setTimeout(() => saveLectureNotes(n), 1500); };
+  $("#ln-save").onclick = () => saveLectureNotes(n);
+  const ob = $("#ln-outline");
+  if (ob) ob.onclick = () => { ta.value = outlineFor(n); ob.remove(); ta.oninput(); ta.focus(); };
+}
+
+async function saveLectureNotes(n) {
+  clearTimeout(lnTimer);
+  const ta = $("#ln-text");
+  if (!ta || !db) return;
+  if (lnSaving) { lnTimer = setTimeout(() => saveLectureNotes(n), 800); return; }
+  lnSaving = true;
+  const text = ta.value;
+  $("#ln-status").textContent = "Saving…";
+  try {
+    await db.doc("instructor/lecture-" + n).set({ text, updatedAt: new Date().toISOString() });
+    LNOTES[n] = text;
+    if (ta.value === text) lnDirty = false;
+    const st = $("#ln-status"); if (st) st.textContent = "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  } catch (e) {
+    const st = $("#ln-status"); if (st) st.textContent = "Couldn't save. Check your connection, then select Save.";
+  }
+  lnSaving = false;
+  renderSched(); renderLecture();
+}
+
+function field(label, text, cls) {
+  return text ? `<div class="d-field"><span class="label">${label}</span><p class="${cls || ""}">${esc(text)}</p></div>` : "";
+}
+
+function detailFor(key) {
+  const [kind, id] = [key.slice(0, 2), key.slice(3)];
+  if (kind === "ev") {
+    const e = ALL.find(a => a.id === id); if (!e) return null;
+    const n = NOTES[id] || {}, d = DESC[e.t] || ["", ""];
+    const linked = mine.filter(m => str(m.link) === `${e.y} · ${e.t}`);
+    return {
+      color: `var(--e-${e.era})`, editable: true, docId: id, notes: n,
+      head: `${e.y} · ${esc(eraById(e.era).name)} · Lecture ${e.n}`,
+      title: esc(e.t),
+      badges: `<span class="type-tag">${TYPES[e.k]}</span>${e.a ? `<span class="anchor-badge">Anchor</span>` : ""}${isAmendment(e.t) ? `<span class="anchor-badge pivot-badge">Amendment</span>` : ""}`,
+      defaults: { what: d[0], why: d[1] },
+      extra: e.a ? `<div class="d-field"><span class="label">Student entries connected to this event</span>${linked.length ? `<ul class="d-links">${linked.map(m => `<li class="click" role="button" tabindex="0" data-en="${esc(m.uid + ":" + m.id)}"><span class="yr">${m.y}</span> ${esc(m.t)} <span class="fine">· ${esc(m.who)}</span></li>`).join("")}</ul>` : `<p class="fine">None yet. Students link Era Entries to anchor dates.</p>`}</div>` : ""
+    };
+  }
+  if (kind === "el") {
+    const e = ELECTIONS.find(x => x.id === id); if (!e) return null;
+    return {
+      color: "var(--accent)", editable: true, docId: id, notes: NOTES[id] || {},
+      head: `${e.y} · Presidential election · Lecture ${e.n}`,
+      title: `Election of ${e.y}`,
+      badges: e.p ? `<span class="anchor-badge pivot-badge">Pivotal</span>` : "",
+      defaults: { what: `${e.w} wins. ${e.o}.`, why: e.why || "" }, extra: ""
+    };
+  }
+  if (kind === "en") {
+    const [u, iid] = id.split(":");
+    const d = docs.find(x => x.uid === u), m = d && d.items.find(i => i.id === iid);
+    if (!m) return null;
+    const era = eraOfYear(m.y);
+    return {
+      color: `var(--e-${era.id})`, editable: false,
+      head: `${m.y} · ${esc(era.name)} · Student entry`,
+      title: esc(m.t), badges: `<span class="ex">Added by ${esc(d.name || "Student")}</span>`,
+      body: field("Why it matters", str(m.why)) + field("Connection", `${str(m.rel)} ${str(m.link)}`.trim()) + field("Source", str(m.src)) + (m.at ? `<p class="fine">Added ${esc(new Date(m.at).toLocaleDateString())}</p>` : "")
+    };
+  }
+  return null;
+}
+
+function renderDetail() {
+  const d = detailFor(openKey);
+  const box = $("#detail-body");
+  if (!d) { box.innerHTML = `<p class="fine">This item is no longer on the timeline.</p>`; return; }
+  $("#detail").style.setProperty("--c", d.color);
+  let body;
+  if (d.body) body = d.body;
+  else if (editing) {
+    const v = (f) => esc(d.notes[f] || "");
+    body = `<form id="d-form" class="d-edit">
+      <p class="fine">Leave a box blank to keep the starter text, shown as gray placeholder text.</p>
+      <div class="field"><label for="d-what">What happened</label><textarea id="d-what" placeholder="${esc(d.defaults.what)}">${v("what")}</textarea></div>
+      <div class="field"><label for="d-why">Why it matters</label><textarea id="d-why" placeholder="${esc(d.defaults.why)}">${v("why")}</textarea></div>
+      <div class="field"><label for="d-read">Reading or primary source</label><textarea id="d-read" placeholder="For example: Common Sense, pages 1–5">${v("read")}</textarea></div>
+      <div class="field"><label for="d-notes">Instructor notes</label><textarea id="d-notes" placeholder="Anything else students should know">${v("notes")}</textarea></div>
+      <p class="err" id="d-err" role="alert"></p>
+      <div class="d-actions"><button type="submit" class="btn primary">Save</button><button type="button" class="btn" id="d-cancel">Cancel</button></div>
+    </form>`;
+  } else {
+    body = field("What happened", d.notes.what || d.defaults.what) + field("Why it matters", d.notes.why || d.defaults.why) +
+      field("Reading or primary source", d.notes.read) + field("Instructor notes", d.notes.notes) + d.extra +
+      (d.editable && isTeacher && db ? `<div class="d-actions"><button class="btn" id="d-edit">Edit this card</button></div>` : "");
+  }
+  box.innerHTML = `<div class="eyebrow" style="color:var(--c)">${d.head}</div><h3>${d.title}</h3><div class="d-badges">${d.badges}</div>${body}`;
+  const ed = $("#d-edit"); if (ed) ed.onclick = () => { editing = true; renderDetail(); $("#d-what").focus(); };
+  const cancel = $("#d-cancel"); if (cancel) cancel.onclick = () => { editing = false; renderDetail(); };
+  const form = $("#d-form");
+  if (form) form.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const data = { what: $("#d-what").value.trim(), why: $("#d-why").value.trim(), read: $("#d-read").value.trim(), notes: $("#d-notes").value.trim(), updatedAt: new Date().toISOString() };
+    try { await db.doc("events/" + d.docId).set(data); NOTES[d.docId] = data; editing = false; renderDetail(); }
+    catch (e) { $("#d-err").textContent = "Couldn't save the card. Check your connection and try again."; }
+  };
+}
+
+function openDetail(key) {
+  openKey = key; editing = false;
+  const dlg = $("#detail");
+  const isLn = key.startsWith("ln:");
+  if (isLn && !isOwnerV) return;
+  dlg.classList.toggle("wide", isLn);
+  if (isLn) renderLectureNotes(+key.slice(3)); else renderDetail();
+  if (!dlg.open) { try { dlg.showModal(); } catch (e) { dlg.setAttribute("open", ""); } }
+}
+function reopen() { if ($("#detail").open && openKey && !openKey.startsWith("ln:")) renderDetail(); }
+
+function keyFrom(el) {
+  if (el.dataset.ln) return "ln:" + el.dataset.ln;
+  if (el.dataset.ev) return "ev:" + el.dataset.ev;
+  if (el.dataset.el) return "el:" + el.dataset.el;
+  if (el.dataset.en) return "en:" + el.dataset.en;
+  return null;
+}
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest && ev.target.closest("[data-ev],[data-el],[data-en],[data-ln]");
+  if (el && !el.closest("form")) openDetail(keyFrom(el));
+});
+document.addEventListener("keydown", (ev) => {
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches && ev.target.matches("[role=button][data-ev],[role=button][data-el],[role=button][data-en]")) { ev.preventDefault(); openDetail(keyFrom(ev.target)); }
+});
+$("#d-close").onclick = () => $("#detail").close ? $("#detail").close() : $("#detail").removeAttribute("open");
+$("#detail").addEventListener("close", () => {
+  if (openKey && openKey.startsWith("ln:") && lnDirty) saveLectureNotes(+openKey.slice(3));
+  openKey = null; editing = false;
+});
+$("#detail").addEventListener("click", (ev) => { if (ev.target === $("#detail")) $("#detail").close(); });
+
+function setType(k) {
+  typeF = typeF === k ? null : k;
+  renderTypes(); renderMix(); renderChart(); renderLecture(); renderSofar();
+}
+
+function renderTypes() {
+  const count = (k) => ALL.filter(e => e.k === k).length;
+  $("#types").innerHTML = `<span class="lbl">Highlight a type:</span><button aria-pressed="${!typeF}" data-k="">All<span class="c">${ALL.length}</span></button>` +
+    Object.entries(TYPES).map(([k, v]) => `<button aria-pressed="${typeF === k}" data-k="${k}">${esc(v)}<span class="c">${count(k)}</span></button>`).join("");
+  $("#types").querySelectorAll("button").forEach(b => b.onclick = () => b.dataset.k ? setType(b.dataset.k) : (typeF = null, setType(null)));
+}
+
+function renderMix() {
+  const keys = Object.keys(TYPES);
+  const cell = (n, tot, label, k) => {
+    const pct = tot ? n / tot : 0;
+    return `<td class="cell${typeF === k ? " sel" : ""}" style="background:color-mix(in srgb, var(--accent) ${Math.round(pct * 60)}%, var(--surface))" title="${esc(label)}: ${n} ${esc(TYPES[k])} event${n === 1 ? "" : "s"} (${Math.round(pct * 100)}%)">${n}</td>`;
+  };
+  let html = `<thead><tr><th>Era</th>${keys.map(k => `<th><button data-k="${k}" aria-pressed="${typeF === k}">${esc(TYPES[k])}</button></th>`).join("")}<th>Total</th></tr></thead><tbody>`;
+  ERAS.forEach(e => {
+    const evs = ALL.filter(a => a.era === e.id);
+    html += `<tr><td style="--c:var(--e-${e.id})"><span class="era-dot"></span>${esc(e.name)}</td>${keys.map(k => cell(evs.filter(a => a.k === k).length, evs.length, e.name, k)).join("")}<td class="cell">${evs.length}</td></tr>`;
+  });
+  html += `<tr class="tot"><td>Whole course</td>${keys.map(k => cell(ALL.filter(a => a.k === k).length, ALL.length, "Whole course", k)).join("")}<td class="cell">${ALL.length}</td></tr></tbody>`;
+  $("#mix").innerHTML = html;
+  $("#mix").querySelectorAll("th button").forEach(b => b.onclick = () => setType(b.dataset.k));
+}
+
+function renderElections() {
+  $("#elections").innerHTML = ELECTIONS.map(e => `<tr class="${e.p ? "pv" : ""}"><td>${e.y}</td><td>${e.p ? `<b>${esc(e.w)}</b><span class="why">${esc(e.why)}</span>` : esc(e.w)}</td><td>${esc(e.o)}</td><td><button data-n="${e.n}">L${e.n}</button></td></tr>`).join("");
+  $("#elections").querySelectorAll("button").forEach(b => b.onclick = () => { go(+b.dataset.n); document.querySelector(".builder").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); });
+}
+
+function go(n, byUser = true) {
+  const cap = (!isTeacher && LIVE) ? LIVE.lecture : 31;
+  if (byUser) userScrubbed = true;
+  cur = Math.max(1, Math.min(cap, n || 1));
+  try { history.replaceState(null, "", "#lecture-" + cur); } catch (e) {}
+  renderChart(); renderLecture(); renderSofar(); renderLiveBar();
+}
+
+// ---- Class progress and the projector view ----
+const seqFor = (n) => [...ALL.filter(a => a.n === n), ...ELECTIONS.filter(e => e.n === n)].sort((a, b) => a.y - b.y || (a.w ? 1 : 0) - (b.w ? 1 : 0));
+const P = { open: false, lec: 1, k: 0, review: false };
+let pendingLive = null, liveBusy = false;
+
+function applyLive(v) {
+  let next = null;
+  if (v && !v.reset && Number.isInteger(v.lecture) && v.lecture >= 1 && v.lecture <= 31 && Array.isArray(v.ids))
+    next = { lecture: v.lecture, ids: v.ids.filter(i => typeof i === "string").slice(0, 40), at: str(v.at) };
+  const at = v ? str(v.at) : "";
+  if (LIVE && LIVE.at && at && at < LIVE.at) return;
+  const prev = LIVE;
+  LIVE = next;
+  $("#lec").max = (!isTeacher && LIVE) ? LIVE.lecture : 31;
+  const wasFollowing = !userScrubbed || (prev && cur === prev.lecture);
+  if (LIVE && !isTeacher && (wasFollowing || cur > LIVE.lecture)) go(LIVE.lecture, false);
+  else if (LIVE && isTeacher && prev && cur === prev.lecture && !P.open) go(LIVE.lecture, false);
+  else { renderChart(); renderLecture(); renderSofar(); renderLiveBar(); }
+}
+
+function renderLiveBar() {
+  const bar = $("#live-bar");
+  if (!bar) return;
+  const parts = [];
+  if (LIVE) {
+    const seq = seqFor(LIVE.lecture), k = seq.filter(i => LIVE.ids.includes(i.id)).length;
+    parts.push(`<span class="live-dot" aria-hidden="true"></span><span><b>Class is on Lecture ${LIVE.lecture}</b>, ${esc(LECTURES[LIVE.lecture - 1].title)} · ${k} of ${seq.length} added</span>`);
+    if (cur !== LIVE.lecture) parts.push(`<button class="btn" id="lb-follow">Go to class</button>`);
+  } else if (isTeacher) parts.push(`<span class="fine">Class progress starts when you add the first event in the projector view. Until then, students can browse every lecture.</span>`);
+  if (isTeacher && db) {
+    parts.push(`<button class="btn primary" id="lb-present">Present Lecture ${cur} on the projector</button>`);
+    if (LIVE) parts.push(`<button class="btn" id="lb-reset">Reset class progress</button>`);
+  }
+  bar.hidden = !parts.length;
+  bar.innerHTML = parts.join("");
+  const f = $("#lb-follow"); if (f) f.onclick = () => { userScrubbed = false; go(LIVE.lecture, false); };
+  const p = $("#lb-present"); if (p) p.onclick = () => openPresent(cur);
+  const r = $("#lb-reset"); if (r) r.onclick = () => confirmThen(r, async () => {
+    try {
+      await db.doc("live/state").delete();
+      const msg = { reset: true, at: new Date().toISOString() };
+      if (room) room.emit("live", msg).catch(() => {});
+      applyLive(msg);
+    } catch (e) { r.textContent = "Couldn't reset"; }
+  });
+}
+
+function pushLive() {
+  if (P.review || !$("#p-bc").checked || !db) return;
+  const seq = seqFor(P.lec);
+  const state = { lecture: P.lec, ids: seq.slice(0, P.k).map(i => i.id), at: new Date().toISOString() };
+  applyLive(state);
+  if (room) room.emit("live", state).catch(() => {});
+  pendingLive = state;
+  flushLive();
+}
+
+async function flushLive() {
+  if (liveBusy) return;
+  liveBusy = true;
+  while (pendingLive) {
+    const s = pendingLive; pendingLive = null;
+    try { await db.doc("live/state").set(s); }
+    catch (e) { $("#p-sync").textContent = "Couldn't update students' timelines. Check your connection."; }
+  }
+  liveBusy = false;
+}
+
+function openPresent(n) {
+  const seq = seqFor(n);
+  P.lec = n; P.open = true;
+  P.review = !!(LIVE && n < LIVE.lecture);
+  P.k = P.review ? seq.length : (LIVE && LIVE.lecture === n) ? seq.filter(i => LIVE.ids.includes(i.id)).length : 0;
+  $("#present").hidden = false;
+  document.body.style.overflow = "hidden";
+  renderPresent();
+  $("#p-next").focus();
+}
+
+function closePresent() {
+  P.open = false;
+  $("#present").hidden = true;
+  document.body.style.overflow = "";
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  go(P.lec, false);
+}
+
+function pStep(d) {
+  if (P.review) return;
+  const len = seqFor(P.lec).length, k = Math.max(0, Math.min(len, P.k + d));
+  if (k === P.k) return;
+  P.k = k;
+  renderPresent();
+  pushLive();
+}
+
+function renderPresent() {
+  const l = LECTURES[P.lec - 1], seq = seqFor(P.lec), shown = new Set(seq.slice(0, P.k).map(i => i.id));
+  const placed = (item) => item.n < P.lec || (item.n === P.lec && shown.has(item.id));
+  $("#present").style.setProperty("--c", `var(--e-${l.era})`);
+  $("#p-eyebrow").textContent = `Week ${l.wk} · Lecture ${l.n} · ${eraById(l.era).name}`;
+  $("#p-title").textContent = l.title;
+  $("#p-q").textContent = l.q;
+  $("#p-lec").value = String(P.lec);
+  drawTimeline($("#p-svg"), P.lec, placed, false);
+  const last = P.k ? seq[P.k - 1] : null;
+  let card;
+  if (!seq.length) card = `<p class="p-start">${P.lec === 1 ? "Draw the frame together: a line from 1492 to 1877, the five eras, and the six boundary years." : "Students rebuild the whole timeline from their cards, then check it against the class timeline."}</p>`;
+  else if (!last) card = `<p class="p-start">Select <b>Add next</b> or press the right arrow to place the first event.</p><p class="fine">Timeline skill: ${esc(l.skill)}</p>`;
+  else if (last.w) {
+    const n = NOTES[last.id] || {};
+    card = `<div class="p-year" style="color:var(--accent)">${last.y}</div><div class="p-main"><div class="d-badges"><span class="type-tag">Presidential election</span>${last.p ? `<span class="anchor-badge pivot-badge">Pivotal</span>` : ""}</div><h3>Election of ${last.y}</h3><p class="p-big">${esc(n.what || `${last.w} wins. ${last.o}.`)}</p>${(n.why || last.why) ? `<p>${esc(n.why || last.why)}</p>` : ""}</div>`;
+  } else {
+    const n = NOTES[last.id] || {}, d = DESC[last.t] || ["", ""];
+    card = `<div class="p-year" style="color:var(--e-${last.era})">${last.y}</div><div class="p-main">
+      <div class="d-badges"><span class="type-tag">${TYPES[last.k]}</span>${last.a ? `<span class="anchor-badge">Anchor</span>` : ""}${isAmendment(last.t) ? `<span class="anchor-badge pivot-badge">Amendment</span>` : ""}</div>
+      <h3>${esc(last.t)}</h3>
+      <div class="p-5w"><div><b>Who</b></div><div><b>What</b></div><div><b>Where</b></div><div><b>Why it matters</b><span>… because …</span></div></div>
+      <div class="d-actions"><button class="btn" id="p-reveal">Show answer</button></div>
+      <div class="p-answer" id="p-answer" hidden><p><b>What happened.</b> ${esc(n.what || d[0])}</p><p><b>Why it matters.</b> ${esc(n.why || d[1])}</p></div>
+    </div>`;
+  }
+  $("#p-card").innerHTML = card;
+  const rv = $("#p-reveal"); if (rv) rv.onclick = () => { const a = $("#p-answer"); a.hidden = !a.hidden; rv.textContent = a.hidden ? "Show answer" : "Hide answer"; };
+  $("#p-count").textContent = seq.length ? (P.k === seq.length ? `All ${seq.length} added. Close: answer the guiding question in two sentences.` : `${P.k} of ${seq.length} added`) : "";
+  $("#p-prev").disabled = P.review || P.k === 0;
+  $("#p-next").disabled = P.review || P.k === seq.length;
+  $("#p-sync").textContent = P.review ? "Review: the class already finished this lecture, so students' timelines won't change."
+    : !$("#p-bc").checked ? "Rehearsal: students' timelines won't change."
+    : (LIVE && LIVE.lecture === P.lec) ? "Students' timelines match this screen." : "Students' timelines update when you add the first event.";
+}
+
+$("#p-lec").innerHTML = LECTURES.map(l => `<option value="${l.n}">${l.n}. ${esc(l.title)}</option>`).join("");
+$("#p-lec").onchange = (e) => openPresent(+e.target.value);
+$("#p-prev").onclick = () => pStep(-1);
+$("#p-next").onclick = () => pStep(1);
+$("#p-exit").onclick = closePresent;
+$("#p-bc").onchange = renderPresent;
+$("#p-full").onclick = () => {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else if ($("#present").requestFullscreen) $("#present").requestFullscreen().catch(() => { $("#p-sync").textContent = "Full screen isn't available here. Use your browser's full-screen mode instead."; });
+};
+document.addEventListener("keydown", (ev) => {
+  if (!P.open || $("#detail").open) return;
+  const tag = (ev.target.tagName || "").toLowerCase();
+  if (tag === "select" || tag === "input" || tag === "textarea") return;
+  const onButton = tag === "button";
+  if (ev.key === "ArrowRight" || ev.key === "PageDown" || (ev.key === " " && !onButton)) { ev.preventDefault(); pStep(1); }
+  else if (ev.key === "ArrowLeft" || ev.key === "PageUp") { ev.preventDefault(); pStep(-1); }
+  else if (ev.key === "f" || ev.key === "F") $("#p-full").click();
+  else if (ev.key === "Escape" && !document.fullscreenElement) closePresent();
+});
+
+$("#lec").oninput = (e) => go(+e.target.value);
+$("#prev").onclick = () => go(cur - 1);
+$("#next").onclick = () => go(cur + 1);
+const setScale = (v) => { scale = v; $("#sc-eq").setAttribute("aria-pressed", v === "eq"); $("#sc-true").setAttribute("aria-pressed", v === "true"); renderChart(); };
+$("#sc-eq").onclick = () => setScale("eq");
+$("#sc-true").onclick = () => setScale("true");
+
+$("#form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const who = $("#f-student").value.trim(), y = parseInt($("#f-year").value, 10), t = $("#f-name").value.trim(), why = $("#f-why").value.trim();
+  const err = $("#f-err");
+  if (!who) { err.textContent = "Enter your name."; $("#f-student").focus(); return; }
+  if (!(y >= 1492 && y <= 1877)) { err.textContent = "Enter a year between 1492 and 1877."; $("#f-year").focus(); return; }
+  if (!t) { err.textContent = "Say what happened."; $("#f-name").focus(); return; }
+  if (!why) { err.textContent = "Explain why the event matters."; $("#f-why").focus(); return; }
+  if (!db || !uid) { err.textContent = "Sign in to claude.ai to add entries."; return; }
+  if (saving) return;
+  err.textContent = "";
+  saving = true;
+  const prev = myItems;
+  myItems = myItems.concat([{ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), y, t, why, rel: $("#f-rel").value, link: $("#f-link").value, src: $("#f-src").value.trim(), at: new Date().toISOString() }]);
+  try {
+    await saveMine();
+    ["#f-year", "#f-name", "#f-why", "#f-src"].forEach(s => $(s).value = "");
+    $("#f-status").textContent = `Added “${t}” to the class timeline.`;
+  } catch (e) {
+    myItems = prev;
+    if (e && e.code === "invalid_argument") lockForm("You can't add entries with your current access. Ask your instructor for Contributor access.");
+    else err.textContent = "Couldn't save your entry. Check your connection and try again.";
+  }
+  saving = false;
+  renderEntries();
+});
+$("#t-era").innerHTML += ERAS.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join("");
+$("#t-era").onchange = () => renderTeacher();
+
+const m = /^#lecture-(\d+)$/.exec(location.hash);
+if (m) cur = Math.max(1, Math.min(31, +m[1]));
+else cur = 12;
+renderLinkOptions();
+renderSched();
+renderTypes();
+renderMix();
+renderElections();
+renderEntries();
+go(cur, false);
+connect();
+</script>
+
+</body></html>
